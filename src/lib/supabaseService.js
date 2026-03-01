@@ -64,6 +64,11 @@ export async function updateTjanstById(id, fields) {
   check(error, 'Kunde inte uppdatera tjänst');
 }
 
+export async function deleteTjanstById(id) {
+  const { error } = await supabase.from('tjanster').delete().eq('id', id);
+  check(error, 'Kunde inte ta bort tjänst');
+}
+
 // ─── Matchningar ─────────────────────────────────────────────────────────────
 
 export async function getMatchningar() {

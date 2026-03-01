@@ -2,10 +2,22 @@ import { useState } from 'react';
 import { parseBoolean } from '../../lib/utils.js';
 import Button from '../ui/Button.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
-import { Briefcase } from 'lucide-react';
+import { Briefcase, Trash2 } from 'lucide-react';
 
-export default function TjanstLista({ tjanster, rekryterare, onReaktivera }) {
+export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onDelete }) {
   const [filter, setFilter] = useState('aktiva');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete(id) {
+    setDeleting(true);
+    try {
+      await onDelete(id);
+    } finally {
+      setDeleting(false);
+      setConfirmDeleteId(null);
+    }
+  }
 
   const filtered = tjanster
     .filter((t) => {
@@ -50,7 +62,7 @@ export default function TjanstLista({ tjanster, rekryterare, onReaktivera }) {
           return (
             <div
               key={t.id}
-              className={`flex items-start justify-between gap-4 px-4 py-3 rounded-lg border ${
+              className={`group flex items-start justify-between gap-4 px-4 py-3 rounded-lg border ${
                 aktiv
                   ? 'bg-white border-[var(--border)]'
                   : 'bg-[var(--bg-secondary)] border-[var(--border)] opacity-60'
@@ -66,11 +78,36 @@ export default function TjanstLista({ tjanster, rekryterare, onReaktivera }) {
                   </p>
                 )}
               </div>
-              {!aktiv && (
-                <Button size="sm" variant="secondary" onClick={() => onReaktivera(t.id)}>
-                  Reaktivera
-                </Button>
-              )}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {!aktiv && (
+                  <Button size="sm" variant="secondary" onClick={() => onReaktivera(t.id)}>
+                    Reaktivera
+                  </Button>
+                )}
+                {confirmDeleteId === t.id ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      loading={deleting}
+                      onClick={() => handleDelete(t.id)}
+                    >
+                      Bekräfta
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)}>
+                      Avbryt
+                    </Button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteId(t.id)}
+                    className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Ta bort tjänst"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}

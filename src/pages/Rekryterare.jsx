@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTjanster, REKRYTERARE } from '../hooks/useTjanster.js';
+import { parseBoolean } from '../lib/utils.js';
 import TjanstImport from '../components/rekryterare/TjanstImport.jsx';
 import TjanstLista from '../components/rekryterare/TjanstLista.jsx';
 
@@ -11,7 +12,7 @@ const REK_COLORS = {
 };
 
 export default function Rekryterare() {
-  const { tjanster, loading, error, load, importTjanster, reaktiveraTjanst, getTjansterForRekryterare } = useTjanster();
+  const { tjanster, loading, error, load, importTjanster, reaktiveraTjanst, deleteTjanst, getTjansterForRekryterare } = useTjanster();
   const [activeTab, setActiveTab] = useState('Petra');
 
   useEffect(() => { load(); }, []);
@@ -28,7 +29,7 @@ export default function Rekryterare() {
       {/* Tabs */}
       <div className="flex border-b border-[var(--border)] mb-6 gap-1 overflow-x-auto">
         {REKRYTERARE.map((rek) => {
-          const count = getTjansterForRekryterare(rek).filter((t) => t.aktiv === 'TRUE').length;
+          const count = getTjansterForRekryterare(rek).filter((t) => parseBoolean(t.aktiv)).length;
           const isActive = activeTab === rek;
           return (
             <button
@@ -66,6 +67,7 @@ export default function Rekryterare() {
           tjanster={getTjansterForRekryterare(activeTab)}
           rekryterare={activeTab}
           onReaktivera={reaktiveraTjanst}
+          onDelete={deleteTjanst}
         />
       </div>
     </div>
