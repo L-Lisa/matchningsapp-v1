@@ -25,12 +25,6 @@ export default function Deltagare() {
   async function handleImport(text) {
     const result = await importDeltagare(text);
     if (result.success && result.added > 0) {
-      // Hitta de nya deltagarna efter reload
-      const fresh = await (async () => {
-        await load();
-        return [];
-      })();
-      // Vi hanterar detta via effect nedan
       setShowNyaPrompt(true);
     }
     return result;

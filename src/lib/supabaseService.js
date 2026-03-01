@@ -77,16 +77,50 @@ export async function getMatchningar() {
   return data;
 }
 
+/**
+ * Smart replace av matchningar för en rekryterare.
+ *
+ * - Tar bort matchningar som inte längre finns i newList
+ * - Sätter in genuint nya matchningar (nytt id)
+ * - Uppdaterar befintliga icke-redigerade med ny AI-motivering
+ * - Lämnar redigerade matchningar (ai_motivering_redigerad=true) helt orörda
+ */
 export async function replaceMatchningarForRekryterare(rekryterare, newList) {
-  const { error: delError } = await supabase
+  // Hämta befintliga matchningar för denna rekryterare
+  const { data: current, error: fetchErr } = await supabase
     .from('matchningar')
-    .delete()
+    .select('id, deltagare_id, tjanst_id')
     .eq('rekryterare', rekryterare);
-  check(delError, `Kunde inte rensa matchningar för ${rekryterare}`);
+  check(fetchErr, 'Kunde inte hämta befintliga matchningar');
 
-  if (newList.length > 0) {
-    const { error: insError } = await supabase.from('matchningar').insert(newList);
-    check(insError, `Kunde inte spara matchningar för ${rekryterare}`);
+  const currentById = new Map((current ?? []).map((m) => [m.id, m]));
+  const newIds = new Set(newList.map((m) => m.id));
+
+  // 1. Ta bort matchningar som inte längre finns i resultatet
+  const toDeleteIds = [...currentById.keys()].filter((id) => !newIds.has(id));
+  if (toDeleteIds.length > 0) {
+    const { error } = await supabase.from('matchningar').delete().in('id', toDeleteIds);
+    check(error, 'Kunde inte ta bort gamla matchningar');
+  }
+
+  // 2. Sätt in genuint nya matchningar (id finns inte i DB)
+  const toInsert = newList.filter((m) => !currentById.has(m.id));
+  if (toInsert.length > 0) {
+    const { error } = await supabase.from('matchningar').insert(toInsert);
+    check(error, 'Kunde inte spara nya matchningar');
+  }
+
+  // 3. Uppdatera befintliga icke-redigerade med ny motivering och nytt datum
+  //    Redigerade (ai_motivering_redigerad=true) lämnas oförändrade i DB
+  const toUpdate = newList.filter(
+    (m) => currentById.has(m.id) && !m.ai_motivering_redigerad
+  );
+  for (const m of toUpdate) {
+    const { error } = await supabase
+      .from('matchningar')
+      .update({ ai_motivering: m.ai_motivering, korning_datum: m.korning_datum })
+      .eq('id', m.id);
+    check(error, 'Kunde inte uppdatera matchning');
   }
 }
 

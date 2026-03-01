@@ -56,9 +56,7 @@ export function buildExportText(rekryterare, matchningar, tjanster, deltagare, k
     lines.push(sep);
     lines.push('');
 
-    const tjänstMatchningar = tjänstGrupper.get(tjanstId);
-    const arNy = tjänstMatchningar.some((m) => parseBoolean(m.ny_denna_korning));
-    const rubrik = `${arNy ? '[NY] ' : ''}${tjanst.foretag} – ${tjanst.tjanst}`;
+    const rubrik = `${tjanst.foretag} – ${tjanst.tjanst}`;
     lines.push(rubrik);
 
     if (tjanst.krav?.trim()) {
@@ -66,6 +64,7 @@ export function buildExportText(rekryterare, matchningar, tjanster, deltagare, k
     }
     lines.push('');
 
+    const tjänstMatchningar = tjänstGrupper.get(tjanstId);
     for (const m of tjänstMatchningar) {
       const d = deltagareMap.get(m.deltagare_id);
       const namn = d?.visningsnamn ?? m.deltagare_id;

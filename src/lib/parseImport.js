@@ -127,6 +127,15 @@ export function mergeDeltagare(newRows, existing) {
 // ─── Tjänsteimport ──────────────────────────────────────────────────────────
 
 /**
+ * Ord som identifierar en rubrikrad i tjänsteimport.
+ * Om foretag eller tjanst matchar → hoppa över raden tyst.
+ */
+const TJANST_HEADER_WORDS = new Set([
+  'företag', 'company',
+  'tjänst', 'position', 'jobb', 'roll', 'titel',
+]);
+
+/**
  * Parsar inklistrad text med format: företag\ttjänst[\tkrav]
  * Returnerar { rows: [{foretag, tjanst, krav}], errors: [string] }
  */
@@ -152,6 +161,11 @@ export function parseTjansterText(text) {
 
     if (!foretag || !tjanst) {
       errors.push(`Rad ${i + 1}: Företag och tjänst får inte vara tomma`);
+      return;
+    }
+
+    // Hoppa över rubrikrader tyst (t.ex. "Företag\tTjänst\tKrav" från Excel)
+    if (TJANST_HEADER_WORDS.has(normalize(foretag)) || TJANST_HEADER_WORDS.has(normalize(tjanst))) {
       return;
     }
 

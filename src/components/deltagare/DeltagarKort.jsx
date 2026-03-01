@@ -33,6 +33,7 @@ export default function DeltagarKort({
   const [fritext, setFritext] = useState(deltagare.fritext ?? '');
   const [savingFritext, setSavingFritext] = useState(false);
   const [cvModal, setCvModal] = useState(null); // null | { existingCv? }
+  const [confirmDeleteCvId, setConfirmDeleteCvId] = useState(null);
   const [confirmArkivera, setConfirmArkivera] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [arkiveraLoading, setArkiveraLoading] = useState(false);
@@ -157,13 +158,30 @@ export default function DeltagarKort({
                 >
                   {cv.rubrik}
                 </button>
-                <button
-                  onClick={() => onDeleteCv(cv.id)}
-                  className="p-1 text-[var(--text-muted)] hover:text-[var(--danger)] rounded transition-colors"
-                  title="Ta bort CV"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {confirmDeleteCvId === cv.id ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { onDeleteCv(cv.id); setConfirmDeleteCvId(null); }}
+                      className="text-xs text-[var(--danger)] hover:underline font-medium"
+                    >
+                      Radera
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteCvId(null)}
+                      className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    >
+                      Avbryt
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteCvId(cv.id)}
+                    className="p-1 text-[var(--text-muted)] hover:text-[var(--danger)] rounded transition-colors"
+                    title="Ta bort CV"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </li>
             ))}
           </ul>

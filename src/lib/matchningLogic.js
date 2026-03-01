@@ -21,63 +21,69 @@ function hasKeywordMatch(text, keywords) {
   return keywords.some((kw) => t.includes(kw.toLowerCase()));
 }
 
-function tokenize(text) {
-  if (!text) return [];
-  return text.toLowerCase().match(/\b\w{4,}\b/g) ?? [];
-}
-
 // ─── Keyword-filter ──────────────────────────────────────────────────────────
 
 /**
  * Avgör om en deltagare ska inkluderas för en given tjänst.
- * Logiken är inkluderande – vi begränsar inga matchningar.
+ *
+ * Regler:
+ * 1. Deltagare utan CV matchas aldrig.
+ * 2. Deltagare med minst en kategori inkluderas bara om någon kategori
+ *    matchar tjänsten (minskar onödiga API-anrop).
+ * 3. Deltagare utan kategorier men med CV inkluderas alltid –
+ *    Claude avgör sedan om det är en riktig match via INGEN_MATCH.
  *
  * @param {object} deltagare - med _cvTexter: [{rubrik, cv_text}]
  * @param {object} tjanst - { foretag, tjanst, krav }
  * @param {object} extraKategoriKeywords - ytterligare keywords från inställningar
  */
 export function passesKeywordFilter(deltagare, tjanst, extraKategoriKeywords = {}) {
+  // Regel 1: inga CV = inga matchningar
+  if (!deltagare._cvTexter || deltagare._cvTexter.length === 0) return false;
+
   const allKeywords = { ...KATEGORI_KEYWORDS, ...extraKategoriKeywords };
   const tjanstText = `${tjanst.tjanst} ${tjanst.foretag} ${tjanst.krav ?? ''}`.toLowerCase();
 
-  // 1. Kategori-match
   const kategoriKeys = [
     ['kategori_restaurang', 'restaurang'],
-    ['kategori_stad', 'stad'],
-    ['kategori_truckkort', 'truckkort'],
+    ['kategori_stad',       'stad'],
+    ['kategori_truckkort',  'truckkort'],
     ['kategori_nystartsjobb', 'nystartsjobb'],
-    ['kategori_bkorkort', 'bkorkort'],
+    ['kategori_bkorkort',   'bkorkort'],
   ];
 
-  const hasKategoriMatch = kategoriKeys.some(([field, key]) => {
-    if (!parseBoolean(deltagare[field])) return false;
-    const keywords = allKeywords[key] ?? [];
-    return hasKeywordMatch(tjanstText, keywords);
-  });
+  const harNagonKategori =
+    kategoriKeys.some(([field]) => parseBoolean(deltagare[field])) ||
+    parseBoolean(deltagare.kategori_extra_1);
 
-  if (hasKategoriMatch) return true;
+  // Regel 2: deltagare med kategorier – inkludera bara om minst en matchar
+  if (harNagonKategori) {
+    const standardMatch = kategoriKeys.some(([field, key]) => {
+      if (!parseBoolean(deltagare[field])) return false;
+      return hasKeywordMatch(tjanstText, allKeywords[key] ?? []);
+    });
+    if (standardMatch) return true;
 
-  // Extra kategori
-  if (parseBoolean(deltagare.kategori_extra_1)) {
-    const extraNamn = (deltagare.kategori_extra_1_namn ?? '').toLowerCase();
-    const extraKw = allKeywords[extraNamn] ?? [];
-    if (hasKeywordMatch(tjanstText, extraKw)) return true;
+    if (parseBoolean(deltagare.kategori_extra_1)) {
+      const extraNamn = (deltagare.kategori_extra_1_namn ?? '').toLowerCase();
+      const extraKw = allKeywords[extraNamn] ?? [];
+      if (hasKeywordMatch(tjanstText, extraKw)) return true;
+    }
+
+    return false; // har kategorier men ingen matchar denna tjänst
   }
 
-  // 2. CV-ord-match (minst 2 ord >3 tecken från CV matchar tjänstetexten)
-  const cvText = (deltagare._cvTexter ?? []).map((c) => c.cv_text ?? '').join(' ');
-  const cvTokens = tokenize(cvText);
-  const tjanstTokens = new Set(tokenize(tjanstText));
-  const cvMatches = cvTokens.filter((t) => tjanstTokens.has(t));
-  if (cvMatches.length >= 2) return true;
-
-  // 3. Fritextmatch (minst 1 ord >3 tecken)
-  const fritextTokens = tokenize(deltagare.fritext ?? '');
-  const fritextMatches = fritextTokens.filter((t) => tjanstTokens.has(t));
-  return fritextMatches.length >= 1;
+  // Regel 3: inga kategorier + har CV → inkludera alltid, Claude avgör
+  return true;
 }
 
 // ─── Prompt-byggare ──────────────────────────────────────────────────────────
+
+/**
+ * Signal som Claude ska returnera exakt när personen INTE passar tjänsten.
+ * Används i matchningService för att filtrera bort icke-matcher.
+ */
+export const INGEN_MATCH_SIGNAL = 'INGEN_MATCH';
 
 export function buildPrompt(deltagare, cvTexter, tjanst) {
   const cvSektioner = cvTexter
@@ -94,8 +100,8 @@ ${cvSektioner}
 TJÄNST: ${tjanst.tjanst} på ${tjanst.foretag}
 KRAV: ${tjanst.krav?.trim() || 'Inga specificerade krav'}
 
-Skriv 1–2 meningar på svenska som förklarar varför denna person kan passa för tjänsten.
-Var specifik och konkret. Nämn relevant erfarenhet eller öppenhet.
-Skriv direkt utan inledning, som om du presenterar personen för rekryteraren.
-Svara med enbart 1–2 meningarna, inget annat.`;
+Bedöm om denna person verkligen passar för tjänsten baserat på CV och krav.
+
+Om personen PASSAR: skriv 1–2 meningar på svenska som presenterar personen för rekryteraren. Var specifik om konkret erfarenhet eller kompetens. Skriv direkt, utan inledning, som om du presenterar personen.
+Om personen INTE PASSAR: svara med exakt texten INGEN_MATCH och inget annat.`;
 }

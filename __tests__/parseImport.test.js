@@ -152,6 +152,14 @@ describe('parseTjansterText', () => {
     expect(rows[1].sorteringsordning).toBe(2);
     expect(rows[2].sorteringsordning).toBe(3);
   });
+
+  it('hoppar över rubrikrad tyst (Företag/Tjänst/Krav)', () => {
+    const text = 'Företag\tTjänst\tKrav\nNobina\tBusschaufför\tKörkort D';
+    const { rows, errors } = parseTjansterText(text);
+    expect(errors).toHaveLength(0);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].foretag).toBe('Nobina');
+  });
 });
 
 // ─── mergeTjanster ────────────────────────────────────────────────────────────

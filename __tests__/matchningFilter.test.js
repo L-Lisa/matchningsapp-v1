@@ -29,61 +29,63 @@ function tjanst(overrides = {}) {
   };
 }
 
-describe('passesKeywordFilter – kategori', () => {
-  it('matchar restaurang-kategori mot tjänst med "kock"', () => {
-    const d = deltagare({ kategori_restaurang: 'TRUE' });
+// CV-data för tester som kräver att deltagaren har ett CV
+const ettCV = [{ rubrik: 'CV', cv_text: 'Erfarenhet av arbete' }];
+
+describe('passesKeywordFilter – ingen CV', () => {
+  it('exkluderar alltid deltagare utan CV, även med kategori', () => {
+    const d = deltagare({ kategori_restaurang: 'TRUE', _cvTexter: [] });
+    const t = tjanst({ tjanst: 'Kock', foretag: 'Restaurang Smaken' });
+    expect(passesKeywordFilter(d, t)).toBe(false);
+  });
+
+  it('exkluderar deltagare utan CV och utan kategorier', () => {
+    const d = deltagare({ _cvTexter: [] });
+    const t = tjanst();
+    expect(passesKeywordFilter(d, t)).toBe(false);
+  });
+});
+
+describe('passesKeywordFilter – med CV, med kategorier', () => {
+  it('inkluderar restaurang-deltagare mot tjänst med "kock"', () => {
+    const d = deltagare({ kategori_restaurang: 'TRUE', _cvTexter: ettCV });
     const t = tjanst({ tjanst: 'Kock', foretag: 'Restaurang Smaken' });
     expect(passesKeywordFilter(d, t)).toBe(true);
   });
 
-  it('matchar inte restaurang-kategori mot kontorsjobb', () => {
-    const d = deltagare({ kategori_restaurang: 'TRUE' });
+  it('exkluderar restaurang-deltagare mot kontorsjobb', () => {
+    const d = deltagare({ kategori_restaurang: 'TRUE', _cvTexter: ettCV });
     const t = tjanst({ tjanst: 'Administratör', foretag: 'Kontor AB' });
     expect(passesKeywordFilter(d, t)).toBe(false);
   });
 
-  it('matchar truckkort-kategori mot lagerjobb', () => {
-    const d = deltagare({ kategori_truckkort: 'TRUE' });
+  it('inkluderar truckkort-deltagare mot lagerjobb', () => {
+    const d = deltagare({ kategori_truckkort: 'TRUE', _cvTexter: ettCV });
     const t = tjanst({ tjanst: 'Lagermedarbetare', foretag: 'Lager AB' });
     expect(passesKeywordFilter(d, t)).toBe(true);
   });
 
-  it('matchar b-körkort mot tjänst med "körkort"', () => {
-    const d = deltagare({ kategori_bkorkort: 'TRUE' });
+  it('inkluderar b-körkort-deltagare mot tjänst med "körkort" i krav', () => {
+    const d = deltagare({ kategori_bkorkort: 'TRUE', _cvTexter: ettCV });
     const t = tjanst({ tjanst: 'Busschaufför', krav: 'Körkort D, YKB' });
     expect(passesKeywordFilter(d, t)).toBe(true);
   });
 });
 
-describe('passesKeywordFilter – CV-ord', () => {
-  it('matchar på minst 2 CV-ord i tjänstetexten', () => {
+describe('passesKeywordFilter – med CV, utan kategorier', () => {
+  it('inkluderar alltid mot alla tjänster när inga kategorier är satta (Claude avgör)', () => {
     const d = deltagare({
-      _cvTexter: [{ rubrik: 'Säljare', cv_text: 'Arbetat med försäljning och kundservice inom butik' }],
+      _cvTexter: [{ rubrik: 'IT', cv_text: 'Programmerare med erfarenhet av Java och Python' }],
     });
-    const t = tjanst({ tjanst: 'Butikssäljare', krav: 'Erfarenhet av kundservice och försäljning' });
-    expect(passesKeywordFilter(d, t)).toBe(true);
-  });
-
-  it('matchar inte på bara 1 CV-ord', () => {
-    const d = deltagare({
-      _cvTexter: [{ rubrik: 'IT', cv_text: 'Programmerare' }],
-    });
-    const t = tjanst({ tjanst: 'Kock', foretag: 'Restaurang', krav: '' });
-    expect(passesKeywordFilter(d, t)).toBe(false);
-  });
-});
-
-describe('passesKeywordFilter – fritext', () => {
-  it('matchar på 1 fritextord när ordet finns i tjänstetexten', () => {
-    // "lager" (5 tecken) finns i fritext OCH som token i foretag "Lager AB"
-    const d = deltagare({ fritext: 'Söker jobb inom lager och logistik' });
-    const t = tjanst({ tjanst: 'Lagerarbetare', foretag: 'Lager AB' });
-    expect(passesKeywordFilter(d, t)).toBe(true);
-  });
-
-  it('matchar inte när inga fritextord finns i tjänstetexten', () => {
-    const d = deltagare({ fritext: 'Öppen för kontorsarbete och administration' });
     const t = tjanst({ tjanst: 'Kock', foretag: 'Restaurang Smaken' });
-    expect(passesKeywordFilter(d, t)).toBe(false);
+    expect(passesKeywordFilter(d, t)).toBe(true);
+  });
+
+  it('inkluderar deltagare utan kategorier oavsett CV-innehåll', () => {
+    const d = deltagare({
+      _cvTexter: [{ rubrik: 'CV', cv_text: 'Butikssäljare med kundkontakt' }],
+    });
+    const t = tjanst({ tjanst: 'Lagermedarbetare', foretag: 'Lager AB' });
+    expect(passesKeywordFilter(d, t)).toBe(true);
   });
 });
