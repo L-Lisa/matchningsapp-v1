@@ -1,4 +1,4 @@
-import { parseBoolean, toSheetsBoolean } from '../../lib/utils.js';
+import { parseBoolean } from '../../lib/utils.js';
 
 const KATEGORIER = [
   { field: 'kategori_restaurang', label: 'Restaurang' },
@@ -11,7 +11,7 @@ const KATEGORIER = [
 export default function KategoriCheckboxar({ deltagare, onChange }) {
   function toggle(field) {
     const current = parseBoolean(deltagare[field]);
-    onChange({ [field]: toSheetsBoolean(!current) });
+    onChange({ [field]: !current });
   }
 
   return (
