@@ -12,7 +12,7 @@ const REK_COLORS = {
 };
 
 export default function Rekryterare() {
-  const { tjanster, loading, error, load, importTjanster, reaktiveraTjanst, deleteTjanst, getTjansterForRekryterare } = useTjanster();
+  const { tjanster, loading, error, load, importTjanster, reaktiveraTjanst, updateTjanst, deleteTjanst, getTjansterForRekryterare } = useTjanster();
   const [activeTab, setActiveTab] = useState('Petra');
 
   useEffect(() => { load(); }, []);
@@ -67,6 +67,7 @@ export default function Rekryterare() {
           tjanster={getTjansterForRekryterare(activeTab)}
           rekryterare={activeTab}
           onReaktivera={reaktiveraTjanst}
+          onUpdate={updateTjanst}
           onDelete={deleteTjanst}
         />
       </div>

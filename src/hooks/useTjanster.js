@@ -49,6 +49,11 @@ export function useTjanster() {
     await load();
   }, [load]);
 
+  const updateTjanst = useCallback(async (id, fields) => {
+    await updateTjanstById(id, { ...fields, uppdaterad: nowTimestamp() });
+    setTjanster((prev) => prev.map((t) => t.id === id ? { ...t, ...fields } : t));
+  }, []);
+
   const deleteTjanst = useCallback(async (id) => {
     await deleteTjanstById(id);
     setTjanster((prev) => prev.filter((t) => t.id !== id));
@@ -62,5 +67,5 @@ export function useTjanster() {
     return tjanster.filter((t) => t.aktiv);
   }
 
-  return { tjanster, loading, error, load, importTjanster, reaktiveraTjanst, deleteTjanst, getTjansterForRekryterare, getAktiva };
+  return { tjanster, loading, error, load, importTjanster, reaktiveraTjanst, updateTjanst, deleteTjanst, getTjansterForRekryterare, getAktiva };
 }

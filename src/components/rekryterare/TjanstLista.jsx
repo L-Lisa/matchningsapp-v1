@@ -2,12 +2,40 @@ import { useState } from 'react';
 import { parseBoolean } from '../../lib/utils.js';
 import Button from '../ui/Button.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
-import { Briefcase, Trash2 } from 'lucide-react';
+import { Briefcase, Trash2, Pencil, Check, X } from 'lucide-react';
 
-export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onDelete }) {
+export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpdate, onDelete }) {
   const [filter, setFilter] = useState('aktiva');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState({ foretag: '', tjanst: '', krav: '' });
+  const [saving, setSaving] = useState(false);
+
+  function startEdit(t) {
+    setEditingId(t.id);
+    setEditDraft({ foretag: t.foretag, tjanst: t.tjanst, krav: t.krav ?? '' });
+    setConfirmDeleteId(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function handleSave(id) {
+    if (!editDraft.foretag.trim() || !editDraft.tjanst.trim()) return;
+    setSaving(true);
+    try {
+      await onUpdate(id, {
+        foretag: editDraft.foretag.trim(),
+        tjanst:  editDraft.tjanst.trim(),
+        krav:    editDraft.krav.trim(),
+      });
+      setEditingId(null);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleDelete(id) {
     setDeleting(true);
@@ -21,7 +49,7 @@ export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onDel
 
   const filtered = tjanster
     .filter((t) => {
-      if (filter === 'aktiva') return parseBoolean(t.aktiv);
+      if (filter === 'aktiva')   return parseBoolean(t.aktiv);
       if (filter === 'inaktiva') return !parseBoolean(t.aktiv);
       return true;
     })
@@ -59,55 +87,126 @@ export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onDel
       <div className="space-y-2">
         {filtered.map((t) => {
           const aktiv = parseBoolean(t.aktiv);
+          const isEditing = editingId === t.id;
+
           return (
             <div
               key={t.id}
-              className={`group flex items-start justify-between gap-4 px-4 py-3 rounded-lg border ${
-                aktiv
+              className={`rounded-lg border transition-colors ${
+                isEditing
+                  ? 'bg-[var(--accent-light)] border-[var(--accent-primary)]'
+                  : aktiv
                   ? 'bg-white border-[var(--border)]'
                   : 'bg-[var(--bg-secondary)] border-[var(--border)] opacity-60'
               }`}
             >
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">
-                  {t.foretag} – {t.tjanst}
-                </p>
-                {t.krav && (
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    Krav: {t.krav}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {!aktiv && (
-                  <Button size="sm" variant="secondary" onClick={() => onReaktivera(t.id)}>
-                    Reaktivera
-                  </Button>
-                )}
-                {confirmDeleteId === t.id ? (
-                  <>
+              {isEditing ? (
+                /* ── Redigeringsläge ── */
+                <div className="px-4 py-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">Företag</label>
+                      <input
+                        type="text"
+                        value={editDraft.foretag}
+                        onChange={(e) => setEditDraft((d) => ({ ...d, foretag: e.target.value }))}
+                        className="w-full px-3 py-1.5 text-sm rounded-lg border border-[var(--accent-primary)] bg-white focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">Tjänst</label>
+                      <input
+                        type="text"
+                        value={editDraft.tjanst}
+                        onChange={(e) => setEditDraft((d) => ({ ...d, tjanst: e.target.value }))}
+                        className="w-full px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] bg-white focus:outline-none focus:border-[var(--accent-primary)]"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">Krav</label>
+                    <input
+                      type="text"
+                      value={editDraft.krav}
+                      onChange={(e) => setEditDraft((d) => ({ ...d, krav: e.target.value }))}
+                      placeholder="T.ex. B-körkort, restaurangerfarenhet"
+                      className="w-full px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] bg-white focus:outline-none focus:border-[var(--accent-primary)]"
+                    />
+                  </div>
+                  <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant="danger"
-                      loading={deleting}
-                      onClick={() => handleDelete(t.id)}
+                      onClick={() => handleSave(t.id)}
+                      loading={saving}
+                      disabled={!editDraft.foretag.trim() || !editDraft.tjanst.trim()}
                     >
-                      Bekräfta
+                      <Check className="w-3.5 h-3.5" /> Spara
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)}>
-                      Avbryt
+                    <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                      <X className="w-3.5 h-3.5" /> Avbryt
                     </Button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setConfirmDeleteId(t.id)}
-                    className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Ta bort tjänst"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+                  </div>
+                </div>
+              ) : (
+                /* ── Visningsläge ── */
+                <div className="flex items-start justify-between gap-4 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">
+                      {t.foretag} – {t.tjanst}
+                    </p>
+                    {t.krav && (
+                      <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                        Krav: {t.krav}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {!aktiv && (
+                      <Button size="sm" variant="secondary" onClick={() => onReaktivera(t.id)}>
+                        Reaktivera
+                      </Button>
+                    )}
+
+                    {/* Redigera */}
+                    {aktiv && (
+                      <button
+                        onClick={() => startEdit(t)}
+                        className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--accent-light)] transition-colors"
+                        title="Redigera tjänst"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    {/* Radera med bekräftelse */}
+                    {confirmDeleteId === t.id ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          loading={deleting}
+                          onClick={() => handleDelete(t.id)}
+                        >
+                          Bekräfta
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)}>
+                          Avbryt
+                        </Button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => { setConfirmDeleteId(t.id); setEditingId(null); }}
+                        className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-50 transition-colors"
+                        title="Ta bort tjänst"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
