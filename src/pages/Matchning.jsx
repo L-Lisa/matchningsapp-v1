@@ -21,7 +21,7 @@ export default function Matchning() {
   const { tjanster, load: loadT } = useTjanster();
   const { matchningar, progress, loading, load: loadM, runMatchning, editMotivering } = useMatchning();
 
-  const [selectedRek, setSelectedRek] = useState(new Set(REKRYTERARE));
+  const [selectedRek, setSelectedRek] = useState(new Set());
   const [running, setRunning] = useState(false);
   const [activeTab, setActiveTab] = useState('Petra');
 
