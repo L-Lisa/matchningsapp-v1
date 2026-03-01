@@ -69,6 +69,11 @@ export async function deleteTjanstById(id) {
   check(error, 'Kunde inte ta bort tjänst');
 }
 
+export async function deleteTjansterByRekryterare(rekryterare) {
+  const { error } = await supabase.from('tjanster').delete().eq('rekryterare', rekryterare);
+  check(error, 'Kunde inte rensa tjänster');
+}
+
 // ─── Matchningar ─────────────────────────────────────────────────────────────
 
 export async function getMatchningar() {

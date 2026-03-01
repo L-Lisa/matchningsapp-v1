@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { getTjanster, insertTjanster, updateTjanstById, deleteTjanstById } from '../lib/supabaseService.js';
+import { getTjanster, insertTjanster, updateTjanstById, deleteTjanstById, deleteTjansterByRekryterare } from '../lib/supabaseService.js';
 import { parseTjansterText, mergeTjanster } from '../lib/parseImport.js';
 import { nowTimestamp } from '../lib/utils.js';
 
@@ -59,6 +59,11 @@ export function useTjanster() {
     setTjanster((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const deleteAllTjanster = useCallback(async (rekryterare) => {
+    await deleteTjansterByRekryterare(rekryterare);
+    setTjanster((prev) => prev.filter((t) => t.rekryterare !== rekryterare));
+  }, []);
+
   function getTjansterForRekryterare(rekryterare) {
     return tjanster.filter((t) => t.rekryterare === rekryterare);
   }
@@ -67,5 +72,5 @@ export function useTjanster() {
     return tjanster.filter((t) => t.aktiv);
   }
 
-  return { tjanster, loading, error, load, importTjanster, reaktiveraTjanst, updateTjanst, deleteTjanst, getTjansterForRekryterare, getAktiva };
+  return { tjanster, loading, error, load, importTjanster, reaktiveraTjanst, updateTjanst, deleteTjanst, deleteAllTjanster, getTjansterForRekryterare, getAktiva };
 }

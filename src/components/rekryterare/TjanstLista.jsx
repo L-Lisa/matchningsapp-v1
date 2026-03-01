@@ -4,10 +4,12 @@ import Button from '../ui/Button.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { Briefcase, Trash2, Pencil, Check, X } from 'lucide-react';
 
-export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpdate, onDelete }) {
+export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpdate, onDelete, onDeleteAll }) {
   const [filter, setFilter] = useState('aktiva');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState({ foretag: '', tjanst: '', krav: '' });
   const [saving, setSaving] = useState(false);
@@ -47,6 +49,16 @@ export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpd
     }
   }
 
+  async function handleDeleteAll() {
+    setDeletingAll(true);
+    try {
+      await onDeleteAll();
+    } finally {
+      setDeletingAll(false);
+      setConfirmDeleteAll(false);
+    }
+  }
+
   const filtered = tjanster
     .filter((t) => {
       if (filter === 'aktiva')   return parseBoolean(t.aktiv);
@@ -67,21 +79,43 @@ export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpd
 
   return (
     <div>
-      {/* Filter */}
-      <div className="flex gap-1 bg-[var(--bg-secondary)] rounded-lg p-1 w-fit mb-4">
-        {[['aktiva', 'Aktiva'], ['inaktiva', 'Inaktiva'], ['alla', 'Alla']].map(([v, l]) => (
+      {/* Filter + Rensa lista */}
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="flex gap-1 bg-[var(--bg-secondary)] rounded-lg p-1 w-fit">
+          {[['aktiva', 'Aktiva'], ['inaktiva', 'Inaktiva'], ['alla', 'Alla']].map(([v, l]) => (
+            <button
+              key={v}
+              onClick={() => setFilter(v)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                filter === v
+                  ? 'bg-white text-[var(--text-primary)] shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {/* Rensa hela listan */}
+        {confirmDeleteAll ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-muted)]">Radera alla tjänster för {rekryterare}?</span>
+            <Button size="sm" variant="danger" loading={deletingAll} onClick={handleDeleteAll}>
+              Ja, rensa
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteAll(false)}>
+              Avbryt
+            </Button>
+          </div>
+        ) : (
           <button
-            key={v}
-            onClick={() => setFilter(v)}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              filter === v
-                ? 'bg-white text-[var(--text-primary)] shadow-sm'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-            }`}
+            onClick={() => { setConfirmDeleteAll(true); setConfirmDeleteId(null); setEditingId(null); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-50 transition-colors border border-[var(--border)]"
           >
-            {l}
+            <Trash2 className="w-3.5 h-3.5" /> Rensa lista
           </button>
-        ))}
+        )}
       </div>
 
       <div className="space-y-2">
@@ -170,15 +204,13 @@ export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpd
                     )}
 
                     {/* Redigera */}
-                    {aktiv && (
-                      <button
-                        onClick={() => startEdit(t)}
-                        className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--accent-light)] transition-colors"
-                        title="Redigera tjänst"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => startEdit(t)}
+                      className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--accent-light)] transition-colors"
+                      title="Redigera tjänst"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
 
                     {/* Radera med bekräftelse */}
                     {confirmDeleteId === t.id ? (
