@@ -81,10 +81,11 @@ export function passesKeywordFilter(deltagare, tjanst, extraKategoriKeywords = {
 
 /**
  * Signal som Claude ska returnera exakt när personen INTE passar tjänsten.
- * Används i matchningService för att filtrera bort icke-matcher.
+ * Behålls för bakåtkompatibilitet men används ej i den nya multi-prompt-flödet.
  */
 export const INGEN_MATCH_SIGNAL = 'INGEN_MATCH';
 
+/** @deprecated Använd buildMultiPrompt istället */
 export function buildPrompt(deltagare, cvTexter, tjanst) {
   const cvSektioner = cvTexter
     .map((cv) => `${cv.rubrik}\n${cv.cv_text}`)
@@ -104,4 +105,66 @@ Bedöm om denna person verkligen passar för tjänsten baserat på CV och krav.
 
 Om personen PASSAR: skriv 1–2 meningar på svenska som presenterar personen för rekryteraren. Var specifik om konkret erfarenhet eller kompetens. Skriv direkt, utan inledning, som om du presenterar personen.
 Om personen INTE PASSAR: svara med exakt texten INGEN_MATCH och inget annat.`;
+}
+
+/**
+ * Bygger en prompt som ber Claude utvärdera en person mot FLERA tjänster på en gång.
+ * Claude returnerar bara de tjänster som matchar, med motivering per rad.
+ *
+ * Svar-format: "MATCH [1]: motivering" per matchande tjänst, ingenting för icke-matcher.
+ *
+ * @param {object} deltagare - med visningsnamn, fritext
+ * @param {Array}  cvTexter  - [{rubrik, cv_text}]
+ * @param {Array}  tjanster  - [{id, tjanst, foretag, krav}] – max 30 per anrop
+ */
+export function buildMultiPrompt(deltagare, cvTexter, tjanster) {
+  const cvSektioner = cvTexter
+    .map((cv) => `${cv.rubrik}\n${cv.cv_text}`)
+    .join('\n\n---\n\n');
+
+  const tjanstLista = tjanster
+    .map(
+      (t, i) =>
+        `[${i + 1}] ${t.tjanst} – ${t.foretag}\nKrav: ${t.krav?.trim() || 'Inga specificerade krav'}`
+    )
+    .join('\n\n');
+
+  return `Du är expert på jobbmatchning i Sverige.
+
+DELTAGARE: ${deltagare.visningsnamn}
+FRITEXT: ${deltagare.fritext?.trim() || 'Ingen extra information'}
+CV:
+${cvSektioner}
+
+Nedan finns ${tjanster.length} lediga tjänster. Avgör vilka denna person passar för baserat på CV och krav.
+
+Instruktioner:
+- För varje tjänst personen PASSAR: skriv exakt "MATCH [nummer]: [1-2 meningar på svenska som presenterar personen specifikt för denna roll. Var konkret om vilken erfarenhet eller kompetens som är relevant.]"
+- För tjänster personen INTE passar: skriv ingenting alls.
+- Om personen inte passar någon tjänst: svara med exakt "INGA_MATCHER"
+
+TJÄNSTER:
+${tjanstLista}`;
+}
+
+/**
+ * Parsar Claudes svar från buildMultiPrompt.
+ * Returnerar lista med {tjanst_id, motivering} för de tjänster som matchade.
+ *
+ * @param {string} text     - Claudes råsvar
+ * @param {Array}  tjanster - samma array som skickades till buildMultiPrompt
+ */
+export function parseMultiResponse(text, tjanster) {
+  if (!text || text.trim() === 'INGA_MATCHER') return [];
+
+  const matches = [];
+  const regex = /^MATCH\s+\[?(\d+)\]?:\s+(.+)$/gm;
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    const idx = parseInt(m[1], 10) - 1; // 1-baserat → 0-baserat
+    if (idx >= 0 && idx < tjanster.length) {
+      matches.push({ tjanst_id: tjanster[idx].id, motivering: m[2].trim() });
+    }
+  }
+  return matches;
 }

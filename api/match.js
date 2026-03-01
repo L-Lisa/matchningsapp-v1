@@ -3,7 +3,7 @@
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-6';
-const MAX_TOKENS = 300;
+const MAX_TOKENS = 1500;
 const MAX_RETRIES = 3;
 
 function sleep(ms) {

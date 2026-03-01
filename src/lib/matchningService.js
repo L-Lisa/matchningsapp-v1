@@ -1,9 +1,9 @@
 // Orkestrering av matchningskörning – anropar proxy
 
 import { sleep, generateId, nowTimestamp, chunkArray } from './utils.js';
-import { passesKeywordFilter, buildPrompt, INGEN_MATCH_SIGNAL } from './matchningLogic.js';
+import { buildMultiPrompt, parseMultiResponse } from './matchningLogic.js';
 
-export { passesKeywordFilter, buildPrompt, INGEN_MATCH_SIGNAL, KATEGORI_KEYWORDS } from './matchningLogic.js';
+export { passesKeywordFilter, buildPrompt, INGEN_MATCH_SIGNAL, KATEGORI_KEYWORDS, buildMultiPrompt, parseMultiResponse } from './matchningLogic.js';
 
 const APP_SECRET = import.meta.env.VITE_APP_SECRET;
 
@@ -48,6 +48,24 @@ async function callProxy(prompt, attempt = 1) {
  * @param {Function} onProgress - Callback: (done, total, message) => void
  * @returns {Array} Matchningar att spara (inkl. bevarade redigerade)
  */
+const BATCH_SIZE = 30; // tjänster per Claude-anrop
+
+/**
+ * Kör matchning för en rekryterare.
+ *
+ * Arkitektur: per-deltagare med batching.
+ * För varje aktiv deltagare skickas upp till BATCH_SIZE tjänster i ett enda
+ * Claude-anrop. Claude returnerar bara de tjänster som matchar + motivering.
+ *
+ * Bevarar manuellt redigerade motiveringar från previousMatchningar.
+ * Kastar vid API-fel så att körningen avbryts med synligt felmeddelande.
+ *
+ * @param {string}   rekryterare
+ * @param {Array}    aktiva           - Aktiva deltagare med _cvTexter inlagda
+ * @param {Array}    tjanster         - Alla aktiva tjänster för denna rekryterare
+ * @param {Array}    previousMatchningar
+ * @param {Function} onProgress       - (done, total, message) => void
+ */
 export async function runMatchningForRekryterare(
   rekryterare,
   aktiva,
@@ -55,15 +73,14 @@ export async function runMatchningForRekryterare(
   previousMatchningar,
   onProgress
 ) {
-  // Bygg snabb uppslag på befintliga matchningar
   const previousMap = new Map(
     previousMatchningar.map((m) => [`${m.deltagare_id}|${m.tjanst_id}`, m])
   );
 
-  // Identifiera redigerade matchningar vars deltagare+tjänst fortfarande är aktiva
   const aktivaIds = new Set(aktiva.map((d) => d.id));
   const tjanstIds = new Set(tjanster.map((t) => t.id));
 
+  // Bevara manuellt redigerade matchningar vars deltagare+tjänst fortfarande är aktiva
   const redigerade = previousMatchningar.filter(
     (m) =>
       m.ai_motivering_redigerad &&
@@ -72,88 +89,68 @@ export async function runMatchningForRekryterare(
   );
   const redigeradeKeys = new Set(redigerade.map((m) => `${m.deltagare_id}|${m.tjanst_id}`));
 
-  // Bygg kombinationer via keyword-filter (hoppa över redigerade – de bevaras som-är)
-  const kombinationer = [];
-  for (const tjanst of tjanster) {
-    for (const deltagare of aktiva) {
-      const key = `${deltagare.id}|${tjanst.id}`;
-      if (redigeradeKeys.has(key)) continue; // hanteras separat
-      if (passesKeywordFilter(deltagare, tjanst)) {
-        kombinationer.push({ deltagare, tjanst });
-      }
-    }
-  }
+  const results = [...redigerade];
+  const total = aktiva.length;
 
-  const total = kombinationer.length;
   onProgress?.(0, total, `Förbereder matchning för ${rekryterare}...`);
 
-  const batches = chunkArray(kombinationer, 10);
+  for (let i = 0; i < aktiva.length; i++) {
+    const deltagare = aktiva[i];
+    const cvTexter = deltagare._cvTexter ?? [];
 
-  // Starta med de redigerade – de behöver inga API-anrop
-  const results = [...redigerade];
-
-  for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
-    const batch = batches[batchIdx];
-
-    const batchResults = await Promise.all(
-      batch.map(async ({ deltagare, tjanst }) => {
-        const key = `${deltagare.id}|${tjanst.id}`;
-        const prev = previousMap.get(key); // befintlig icke-redigerad, om den finns
-
-        const cvTexter = deltagare._cvTexter ?? [];
-        const prompt = buildPrompt(deltagare, cvTexter, tjanst);
-        let motivering = '';
-
-        try {
-          motivering = await callProxy(prompt);
-        } catch (err) {
-          console.error('[matchning] Prompt misslyckades:', err.message);
-          return null; // skippa vid fel – lägg inte in garbage
-        }
-
-        // Claude säger att det inte är en match
-        if (motivering.trim() === INGEN_MATCH_SIGNAL) {
-          return null;
-        }
-
-        const now = nowTimestamp();
-
-        if (prev) {
-          // Uppdatera befintlig icke-redigerad matchning (behåll id)
-          return {
-            ...prev,
-            ai_motivering: motivering,
-            ai_motivering_redigerad: false,
-            korning_datum: now,
-          };
-        }
-
-        // Ny matchning
-        return {
-          id: generateId(),
-          deltagare_id: deltagare.id,
-          tjanst_id: tjanst.id,
-          rekryterare,
-          ai_motivering: motivering,
-          ai_motivering_redigerad: false,
-          korning_datum: now,
-          ny_denna_korning: true,
-        };
-      })
-    );
-
-    results.push(...batchResults.filter(Boolean));
-
-    onProgress?.(
-      results.length - redigerade.length, // visa bara AI-körda
-      total,
-      `Kör matchning för ${rekryterare} (${results.length - redigerade.length}/${total})...`
-    );
-
-    // 500ms delay mellan batches (inte efter sista)
-    if (batchIdx < batches.length - 1) {
-      await sleep(500);
+    // Deltagare utan CV matchas aldrig
+    if (cvTexter.length === 0) {
+      onProgress?.(i + 1, total, `Matchning för ${rekryterare} (deltagare ${i + 1}/${total})...`);
+      continue;
     }
+
+    // Hoppa över tjänster med redigerade matchningar för denna deltagare
+    const tjansterForDeltagare = tjanster.filter(
+      (t) => !redigeradeKeys.has(`${deltagare.id}|${t.id}`)
+    );
+
+    if (tjansterForDeltagare.length > 0) {
+      const batches = chunkArray(tjansterForDeltagare, BATCH_SIZE);
+
+      for (const batch of batches) {
+        const prompt = buildMultiPrompt(deltagare, cvTexter, batch);
+        const responseText = await callProxy(prompt); // kastar vid API-fel
+        const matches = parseMultiResponse(responseText, batch);
+
+        for (const { tjanst_id, motivering } of matches) {
+          if (!tjanstIds.has(tjanst_id)) continue; // sanity-check mot ogiltiga id:n
+
+          const key = `${deltagare.id}|${tjanst_id}`;
+          const prev = previousMap.get(key);
+          const now = nowTimestamp();
+
+          if (prev) {
+            results.push({
+              ...prev,
+              ai_motivering: motivering,
+              ai_motivering_redigerad: false,
+              korning_datum: now,
+            });
+          } else {
+            results.push({
+              id: generateId(),
+              deltagare_id: deltagare.id,
+              tjanst_id,
+              rekryterare,
+              ai_motivering: motivering,
+              ai_motivering_redigerad: false,
+              korning_datum: now,
+              ny_denna_korning: true,
+            });
+          }
+        }
+      }
+    }
+
+    onProgress?.(i + 1, total, `Matchning för ${rekryterare} (deltagare ${i + 1}/${total})...`);
+
+    // Kort paus mellan deltagare (inte efter sista)
+    if (i < aktiva.length - 1) await sleep(300);
   }
 
   return results;
