@@ -160,6 +160,16 @@ describe('parseTjansterText', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].foretag).toBe('Nobina');
   });
+
+  it('hanterar Excel-citerat fält med inbäddad radbrytning', () => {
+    // Excel exporterar "Mickes Fönsterputs & Städ AB\nStädledare" som ett citerat fält
+    const text = 'Städledare\t"Mickes Fönsterputs & Städ AB\nlokal anteckning"\tB-körkort';
+    const { rows, errors } = parseTjansterText(text);
+    expect(errors).toHaveLength(0);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].tjanst).toBe('Mickes Fönsterputs & Städ AB lokal anteckning');
+    expect(rows[0].krav).toBe('B-körkort');
+  });
 });
 
 // ─── mergeTjanster ────────────────────────────────────────────────────────────

@@ -27,6 +27,64 @@ function parseDate(raw) {
   return null;
 }
 
+// ─── TSV-parser (hanterar Excel-citering med inbäddade radbrytningar) ───────
+
+/**
+ * Parsar en TSV-sträng enligt Excel-konventionen:
+ *   – Fält som innehåller \t, \n eller " omsluts av dubbla citattecken
+ *   – Inbäddade " i ett citerat fält kodas som ""
+ *   – Inbäddade radbrytningar i ett citerat fält ersätts med mellanslag
+ * Returnerar en array av rader, där varje rad är en array av fältsträngar.
+ * Tomma rader (alla fält tomma) filtreras bort.
+ */
+function parseTSVRows(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+
+  const s = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (s[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else if (ch === '\n') {
+        field += ' '; // inbäddad radbrytning → mellanslag
+      } else {
+        field += ch;
+      }
+    } else {
+      if (ch === '"' && field === '') {
+        inQuotes = true;
+      } else if (ch === '\t') {
+        row.push(field);
+        field = '';
+      } else if (ch === '\n') {
+        row.push(field);
+        if (row.some((f) => f.trim() !== '')) rows.push(row);
+        row = [];
+        field = '';
+      } else {
+        field += ch;
+      }
+    }
+  }
+
+  // Sista raden (ingen avslutande \n)
+  row.push(field);
+  if (row.some((f) => f.trim() !== '')) rows.push(row);
+
+  return rows;
+}
+
 // ─── Deltagarimport ─────────────────────────────────────────────────────────
 
 /**
@@ -37,15 +95,11 @@ export function parseDeltagareText(text) {
   const rows = [];
   const errors = [];
 
-  const lines = text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  const tsvRows = parseTSVRows(text);
 
-  lines.forEach((line, i) => {
-    const parts = line.split('\t');
+  tsvRows.forEach((parts, i) => {
     if (parts.length < 2) {
-      errors.push(`Rad ${i + 1}: Saknar tabbseparator – hittade "${line.slice(0, 40)}"`);
+      errors.push(`Rad ${i + 1}: Saknar tabbseparator – hittade "${parts[0].slice(0, 40)}"`);
       return;
     }
 
@@ -143,13 +197,9 @@ export function parseTjansterText(text) {
   const rows = [];
   const errors = [];
 
-  const lines = text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  const tsvRows = parseTSVRows(text);
 
-  lines.forEach((line, i) => {
-    const parts = line.split('\t');
+  tsvRows.forEach((parts, i) => {
     if (parts.length < 2) {
       errors.push(`Rad ${i + 1}: Saknar tabbseparator`);
       return;
