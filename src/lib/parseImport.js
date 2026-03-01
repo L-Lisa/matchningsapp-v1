@@ -50,7 +50,8 @@ export function parseDeltagareText(text) {
     }
 
     const visningsnamn = safeTrim(parts[0]);
-    const slutdatumRaw = safeTrim(parts[1]);
+    // Slutdatum är alltid sista kolumnen – fungerar även om Excel har extra kolumner i mitten
+    const slutdatumRaw = safeTrim(parts[parts.length - 1]);
 
     if (!visningsnamn) {
       errors.push(`Rad ${i + 1}: Tomt namn`);
@@ -59,6 +60,8 @@ export function parseDeltagareText(text) {
 
     const slutdatum = parseDate(slutdatumRaw);
     if (!slutdatum) {
+      // Rubrikrader (t.ex. "Förnamn / Slutdatum") hoppas över tyst
+      if (normalize(slutdatumRaw) === 'slutdatum' || normalize(visningsnamn) === 'förnamn') return;
       errors.push(`Rad ${i + 1}: Kunde inte tolka datum "${slutdatumRaw}" för "${visningsnamn}"`);
       return;
     }

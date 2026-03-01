@@ -52,6 +52,30 @@ describe('parseDeltagareText', () => {
     expect(rows[0].visningsnamn).toBe('Anna Karlsson');
     expect(rows[0].slutdatum).toBe('2026-07-15');
   });
+
+  it('hanterar kommatecken i namn korrekt', () => {
+    const text = 'A / H Fredrik Vollin UX Designer, marknad\t2026-06-09 00:00:00';
+    const { rows, errors } = parseDeltagareText(text);
+    expect(errors).toHaveLength(0);
+    expect(rows[0].visningsnamn).toBe('A / H Fredrik Vollin UX Designer, marknad');
+    expect(rows[0].slutdatum).toBe('2026-06-09');
+  });
+
+  it('använder sista kolumnen som datum vid 3 kolumner', () => {
+    const text = 'Anna Karlsson\tUX Designer\t2026-07-15';
+    const { rows, errors } = parseDeltagareText(text);
+    expect(errors).toHaveLength(0);
+    expect(rows[0].visningsnamn).toBe('Anna Karlsson');
+    expect(rows[0].slutdatum).toBe('2026-07-15');
+  });
+
+  it('hoppar över rubrikrad tyst', () => {
+    const text = 'Förnamn\tSlutdatum\nAnna Karlsson\t2026-07-15';
+    const { rows, errors } = parseDeltagareText(text);
+    expect(errors).toHaveLength(0);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].visningsnamn).toBe('Anna Karlsson');
+  });
 });
 
 // ─── mergeDeltagare ───────────────────────────────────────────────────────────
