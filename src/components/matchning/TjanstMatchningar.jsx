@@ -53,7 +53,6 @@ export default function TjanstMatchningar({
       <ul className="divide-y divide-[var(--border)]">
         {matchningar.map((m) => {
           const d = deltagareMap.get(m.deltagare_id);
-          const manuell = parseBoolean(m.ai_motivering_redigerad) && !m.ai_motivering;
           return (
             <li key={m.id} className="px-5 py-3 group/row">
               <div className="flex items-start gap-2">
@@ -62,9 +61,9 @@ export default function TjanstMatchningar({
                     <span className="font-medium text-sm">
                       {d?.visningsnamn ?? m.deltagare_id}
                     </span>
-                    {manuell && (
-                      <span className="text-xs text-[var(--text-muted)] italic">
-                        Manuellt tillagd
+                    {parseBoolean(d?.kategori_nystartsjobb) && (
+                      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                        Nystartsjobb
                       </span>
                     )}
                   </div>

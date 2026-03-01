@@ -23,6 +23,7 @@ export default function Matchning() {
 
   const [selectedRek, setSelectedRek] = useState(new Set());
   const [running, setRunning] = useState(false);
+  const [runError, setRunError] = useState(null);
   const [activeTab, setActiveTab] = useState('Petra');
 
   useEffect(() => {
@@ -33,8 +34,8 @@ export default function Matchning() {
 
   async function handleKorMatchning() {
     setRunning(true);
+    setRunError(null);
     try {
-      // Bygg aktiva deltagare med _cvTexter
       const aktiva = deltagare
         .filter((d) => parseBoolean(d.aktiv))
         .map((d) => ({
@@ -44,6 +45,8 @@ export default function Matchning() {
 
       const aktivaTjanster = tjanster.filter((t) => parseBoolean(t.aktiv));
       await runMatchning([...selectedRek], aktiva, aktivaTjanster);
+    } catch (err) {
+      setRunError(err.message);
     } finally {
       setRunning(false);
     }
@@ -128,6 +131,12 @@ export default function Matchning() {
           <Zap className="w-5 h-5" />
           {running ? 'Kör matchning...' : 'Kör matchning'}
         </Button>
+
+        {runError && (
+          <p className="text-sm text-[var(--danger)] bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+            Fel: {runError}
+          </p>
+        )}
 
         {/* Progress */}
         {Object.keys(progress).length > 0 && (

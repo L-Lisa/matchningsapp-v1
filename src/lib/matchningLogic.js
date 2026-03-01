@@ -151,20 +151,41 @@ ${tjanstLista}`;
  * Parsar Claudes svar från buildMultiPrompt.
  * Returnerar lista med {tjanst_id, motivering} för de tjänster som matchade.
  *
+ * Hanterar:
+ * - MATCH [1]: text  (med hakparenteser)
+ * - MATCH 1: text    (utan hakparenteser)
+ * - Flerraders motiveringar (konkateneras med mellanslag)
+ * - Extra text från Claude före/efter MATCH-rader ignoreras
+ *
  * @param {string} text     - Claudes råsvar
  * @param {Array}  tjanster - samma array som skickades till buildMultiPrompt
  */
 export function parseMultiResponse(text, tjanster) {
-  if (!text || text.trim() === 'INGA_MATCHER') return [];
+  if (!text || !text.trim() || text.trim() === 'INGA_MATCHER') return [];
 
   const matches = [];
-  const regex = /^MATCH\s+\[?(\d+)\]?:\s+(.+)$/gm;
-  let m;
-  while ((m = regex.exec(text)) !== null) {
-    const idx = parseInt(m[1], 10) - 1; // 1-baserat → 0-baserat
-    if (idx >= 0 && idx < tjanster.length) {
-      matches.push({ tjanst_id: tjanster[idx].id, motivering: m[2].trim() });
+  const MATCH_LINE = /^MATCH\s+\[?(\d+)\]?:\s*(.*)$/i;
+  const lines = text.split('\n');
+  let current = null; // { tjanst_id, motivering }
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const hit = trimmed.match(MATCH_LINE);
+
+    if (hit) {
+      if (current) matches.push(current); // spara föregående
+      const idx = parseInt(hit[1], 10) - 1; // 1-baserat → 0-baserat
+      if (idx >= 0 && idx < tjanster.length) {
+        current = { tjanst_id: tjanster[idx].id, motivering: hit[2].trim() };
+      } else {
+        current = null; // ogiltigt index – ignorera
+      }
+    } else if (current && trimmed && !trimmed.startsWith('INGA')) {
+      // Fortsättningsrad till föregående MATCH
+      current.motivering += ' ' + trimmed;
     }
   }
+
+  if (current) matches.push(current);
   return matches;
 }

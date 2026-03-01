@@ -65,11 +65,25 @@ export async function updateTjanstById(id, fields) {
 }
 
 export async function deleteTjanstById(id) {
+  // Rensa matchningar som refererar till tjänsten innan vi tar bort den
+  const { error: mErr } = await supabase.from('matchningar').delete().eq('tjanst_id', id);
+  check(mErr, 'Kunde inte ta bort matchningar för tjänst');
   const { error } = await supabase.from('tjanster').delete().eq('id', id);
   check(error, 'Kunde inte ta bort tjänst');
 }
 
 export async function deleteTjansterByRekryterare(rekryterare) {
+  // Hämta tjänst-id:n för att kunna rensa tillhörande matchningar
+  const { data: tj, error: tjErr } = await supabase
+    .from('tjanster')
+    .select('id')
+    .eq('rekryterare', rekryterare);
+  check(tjErr, 'Kunde inte hämta tjänster');
+  if (tj && tj.length > 0) {
+    const ids = tj.map((t) => t.id);
+    const { error: mErr } = await supabase.from('matchningar').delete().in('tjanst_id', ids);
+    check(mErr, 'Kunde inte ta bort matchningar för rekryterare');
+  }
   const { error } = await supabase.from('tjanster').delete().eq('rekryterare', rekryterare);
   check(error, 'Kunde inte rensa tjänster');
 }

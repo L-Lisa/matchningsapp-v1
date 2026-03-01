@@ -115,6 +115,10 @@ export async function runMatchningForRekryterare(
       for (const batch of batches) {
         const prompt = buildMultiPrompt(deltagare, cvTexter, batch);
         const responseText = await callProxy(prompt); // kastar vid API-fel
+        console.debug(
+          `[matchning] ${deltagare.visningsnamn} (batch ${batch.length} tjänster) →`,
+          responseText.substring(0, 300)
+        );
         const matches = parseMultiResponse(responseText, batch);
 
         for (const { tjanst_id, motivering } of matches) {
