@@ -1,4 +1,4 @@
-// Orkestrering av matchningskörning – anropar proxy och Sheets
+// Orkestrering av matchningskörning – anropar proxy
 
 import { sleep, generateId, nowTimestamp, chunkArray } from './utils.js';
 import { passesKeywordFilter, buildPrompt } from './matchningLogic.js';

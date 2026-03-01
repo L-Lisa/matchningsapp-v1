@@ -7,7 +7,7 @@ export function generateId() {
   return uuidv4();
 }
 
-// Timestamp ISO för Sheets-skrivning
+// Timestamp ISO (används vid DB-skrivning)
 export function nowTimestamp() {
   return new Date().toISOString();
 }
@@ -52,11 +52,6 @@ export function parseBoolean(value) {
   if (typeof value === 'boolean') return value;
   if (value === 'TRUE' || value === true || value === '1' || value === 1) return true;
   return false;
-}
-
-// Konvertera boolean till Sheets-format
-export function toSheetsBoolean(value) {
-  return value ? 'TRUE' : 'FALSE';
 }
 
 // Klassnamn-hjälp (enkel, ingen extern dep)

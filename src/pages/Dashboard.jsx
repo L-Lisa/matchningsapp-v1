@@ -20,7 +20,7 @@ export default function Dashboard() {
     loadDeltagare();
     loadTjanster();
     loadMatchning();
-  }, []);
+  }, [loadDeltagare, loadTjanster, loadMatchning]);
 
   const aktiva = deltagare.filter((d) => parseBoolean(d.aktiv));
   const aktivaTjanster = tjanster.filter((t) => parseBoolean(t.aktiv));

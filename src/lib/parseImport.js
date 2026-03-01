@@ -74,7 +74,7 @@ export function parseDeltagareText(text) {
  * Matchning på normalize(visningsnamn).
  *
  * Returnerar:
- *   added:    nya Deltagare-objekt (klara att skriva till Sheets)
+ *   added:    nya Deltagare-objekt (klara att spara i DB)
  *   updated:  { id, slutdatum } för befintliga med ändrat datum
  *   unchanged: antal oförändrade
  */
