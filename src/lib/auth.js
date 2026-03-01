@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 
 const SESSION_KEY = 'coachmatch_session';
-const GOOGLE_TOKEN_KEY = 'coachmatch_google_token';
 
 // Validera lösenord mot bcrypt-hash i .env
 export async function validatePassword(password) {
@@ -14,13 +13,8 @@ export async function validatePassword(password) {
 }
 
 // Session i sessionStorage (lever tills webbläsaren stängs)
-export function setSession(googleUser) {
-  const session = {
-    email: googleUser.email,
-    name: googleUser.name,
-    loggedInAt: Date.now(),
-  };
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+export function setSession() {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ loggedInAt: Date.now() }));
 }
 
 export function getSession() {
@@ -34,22 +28,8 @@ export function getSession() {
 
 export function clearSession() {
   sessionStorage.removeItem(SESSION_KEY);
-  clearGoogleToken();
 }
 
 export function isAuthenticated() {
   return getSession() !== null;
-}
-
-// Google OAuth-token i localStorage (behöver överleva page refresh)
-export function setGoogleToken(token) {
-  localStorage.setItem(GOOGLE_TOKEN_KEY, token);
-}
-
-export function getGoogleToken() {
-  return localStorage.getItem(GOOGLE_TOKEN_KEY);
-}
-
-export function clearGoogleToken() {
-  localStorage.removeItem(GOOGLE_TOKEN_KEY);
 }

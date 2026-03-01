@@ -1,5 +1,5 @@
-import { normalize, safeTrim, generateId, nowTimestamp, toSheetsBoolean } from './utils.js';
-import { parseISO, isValid, parse } from 'date-fns';
+import { normalize, safeTrim, generateId, nowTimestamp } from './utils.js';
+import { parseISO, isValid } from 'date-fns';
 
 // ─── Datum-parsning ─────────────────────────────────────────────────────────
 
@@ -98,15 +98,15 @@ export function mergeDeltagare(newRows, existing) {
         visningsnamn: row.visningsnamn,
         slutdatum: row.slutdatum,
         fritext: '',
-        aktiv: toSheetsBoolean(true),
-        arkivdatum: '',
+        aktiv: true,
+        arkivdatum: null,
         matchraknare: 0,
-        kategori_restaurang: toSheetsBoolean(false),
-        kategori_stad: toSheetsBoolean(false),
-        kategori_truckkort: toSheetsBoolean(false),
-        kategori_nystartsjobb: toSheetsBoolean(false),
-        kategori_bkorkort: toSheetsBoolean(false),
-        kategori_extra_1: toSheetsBoolean(false),
+        kategori_restaurang: false,
+        kategori_stad: false,
+        kategori_truckkort: false,
+        kategori_nystartsjobb: false,
+        kategori_bkorkort: false,
+        kategori_extra_1: false,
         kategori_extra_1_namn: '',
         skapad: now,
         uppdaterad: now,
@@ -191,7 +191,7 @@ export function mergeTjanster(newRows, existing, rekryterare) {
         foretag: row.foretag,
         tjanst: row.tjanst,
         krav: row.krav,
-        aktiv: toSheetsBoolean(true),
+        aktiv: true,
         sorteringsordning: row.sorteringsordning,
         skapad: now,
         uppdaterad: now,

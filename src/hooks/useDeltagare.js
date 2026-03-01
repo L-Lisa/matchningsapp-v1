@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import {
-  getDeltagare, addDeltagare, updateDeltagare,
-  getAllCV, addCV, updateAllCV,
-} from '../lib/sheetsService.js';
+  getDeltagare, insertDeltagare, updateDeltagareById,
+  getAllCV, insertCV, updateCVById, deleteCVById,
+} from '../lib/supabaseService.js';
 import { parseDeltagareText, mergeDeltagare } from '../lib/parseImport.js';
-import { generateId, nowTimestamp, parseBoolean, toSheetsBoolean } from '../lib/utils.js';
+import { generateId, nowTimestamp } from '../lib/utils.js';
 
 export function useDeltagare() {
   const [deltagare, setDeltagare] = useState([]);
@@ -32,22 +32,13 @@ export function useDeltagare() {
       return { success: false, errors };
     }
 
-    const aktiva = deltagare.filter((d) => parseBoolean(d.aktiv));
+    const aktiva = deltagare.filter((d) => d.aktiv);
     const { added, updated, unchanged } = mergeDeltagare(rows, aktiva);
 
-    // Lägg till nya
-    if (added.length > 0) await addDeltagare(added);
+    if (added.length > 0) await insertDeltagare(added);
 
-    // Uppdatera slutdatum för befintliga
-    if (updated.length > 0) {
-      const updatedMap = new Map(updated.map((u) => [u.id, u]));
-      const all = await getDeltagare();
-      const patched = all.map((d) =>
-        updatedMap.has(d.id)
-          ? { ...d, slutdatum: updatedMap.get(d.id).slutdatum, uppdaterad: nowTimestamp() }
-          : d
-      );
-      await updateDeltagare(patched);
+    for (const u of updated) {
+      await updateDeltagareById(u.id, { slutdatum: u.slutdatum, uppdaterad: nowTimestamp() });
     }
 
     await load();
@@ -55,58 +46,33 @@ export function useDeltagare() {
   }, [deltagare, load]);
 
   const arkiveraDeltagare = useCallback(async (id) => {
-    const all = await getDeltagare();
-    const patched = all.map((d) =>
-      d.id === id
-        ? { ...d, aktiv: toSheetsBoolean(false), arkivdatum: nowTimestamp(), uppdaterad: nowTimestamp() }
-        : d
-    );
-    await updateDeltagare(patched);
+    await updateDeltagareById(id, { aktiv: false, arkivdatum: nowTimestamp(), uppdaterad: nowTimestamp() });
     await load();
   }, [load]);
 
   const updateFritext = useCallback(async (id, fritext) => {
-    const all = await getDeltagare();
-    const patched = all.map((d) =>
-      d.id === id ? { ...d, fritext, uppdaterad: nowTimestamp() } : d
-    );
-    await updateDeltagare(patched);
-    setDeltagare(patched);
+    await updateDeltagareById(id, { fritext, uppdaterad: nowTimestamp() });
+    setDeltagare((prev) => prev.map((d) => d.id === id ? { ...d, fritext } : d));
   }, []);
 
   const updateKategorier = useCallback(async (id, kategorier) => {
-    const all = await getDeltagare();
-    const patched = all.map((d) =>
-      d.id === id ? { ...d, ...kategorier, uppdaterad: nowTimestamp() } : d
-    );
-    await updateDeltagare(patched);
-    setDeltagare(patched);
+    await updateDeltagareById(id, { ...kategorier, uppdaterad: nowTimestamp() });
+    setDeltagare((prev) => prev.map((d) => d.id === id ? { ...d, ...kategorier } : d));
   }, []);
 
   const resetMatchraknare = useCallback(async (id) => {
-    const all = await getDeltagare();
-    const patched = all.map((d) =>
-      d.id === id ? { ...d, matchraknare: 0, uppdaterad: nowTimestamp() } : d
-    );
-    await updateDeltagare(patched);
-    setDeltagare(patched);
+    await updateDeltagareById(id, { matchraknare: 0, uppdaterad: nowTimestamp() });
+    setDeltagare((prev) => prev.map((d) => d.id === id ? { ...d, matchraknare: 0 } : d));
   }, []);
 
   const saveCv = useCallback(async (deltagareId, rubrik, cvText, existingCvId = null) => {
-    const all = await getAllCV();
     const now = nowTimestamp();
-
     if (existingCvId) {
-      const patched = all.map((c) =>
-        c.id === existingCvId ? { ...c, rubrik, cv_text: cvText, uppdaterad: now } : c
-      );
-      await updateAllCV(patched);
+      await updateCVById(existingCvId, { rubrik, cv_text: cvText, uppdaterad: now });
     } else {
-      const deltagaresCv = all.filter((c) => c.deltagare_id === deltagareId);
-      if (deltagaresCv.length >= 4) {
-        throw new Error('Max 4 CV per deltagare');
-      }
-      await addCV({
+      const deltagaresCv = cvData.filter((c) => c.deltagare_id === deltagareId);
+      if (deltagaresCv.length >= 4) throw new Error('Max 4 CV per deltagare');
+      await insertCV({
         id: generateId(),
         deltagare_id: deltagareId,
         rubrik,
@@ -115,16 +81,13 @@ export function useDeltagare() {
         uppdaterad: now,
       });
     }
-
     const updated = await getAllCV();
     setCvData(updated);
-  }, []);
+  }, [cvData]);
 
   const deleteCv = useCallback(async (cvId) => {
-    const all = await getAllCV();
-    await updateAllCV(all.filter((c) => c.id !== cvId));
-    const updated = await getAllCV();
-    setCvData(updated);
+    await deleteCVById(cvId);
+    setCvData((prev) => prev.filter((c) => c.id !== cvId));
   }, []);
 
   function getCvForDeltagare(deltagareId) {

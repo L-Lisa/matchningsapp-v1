@@ -1,38 +1,28 @@
 # CoachMatch
 
 Privat matchningsverktyg för jobbcoacher inom ROM-programmet (Rusta och Matcha).
-Matchar deltagare mot jobbannonser via AI (Claude) med Google Sheets som lagring.
+Matchar deltagare mot jobbannonser via AI (Claude) med Supabase som databas.
 
 ## Förkrav
 
 - Node 18+
-- Gmail-konto (för Google Sheets-lagring)
+- Supabase-konto (gratis) – https://supabase.com
 - Anthropic API-nyckel
 - Vercel-konto (gratis) – https://vercel.com
 
 ## Setup
 
-### 1. Google Cloud OAuth
+### 1. Skapa Supabase-projekt
 
-1. Gå till https://console.cloud.google.com
-2. Skapa ett nytt projekt
-3. Aktivera **Google Sheets API** under "APIs & Services"
-4. Gå till "APIs & Services" → "Credentials" → "Create Credentials" → "OAuth Client ID"
-5. Välj "Web Application"
-6. Lägg till Authorized JavaScript Origins:
-   - `http://localhost:5173`
-   - `https://din-app.vercel.app` (lägg till efter deploy)
-7. Kopiera **Client ID**
+1. Gå till https://supabase.com och skapa ett konto (gratis)
+2. Klicka **"New project"** – välj ett namn, ett lösenord (spara det), och närmaste region (t.ex. Frankfurt)
+3. Vänta tills projektet startat (ca 1 minut)
+4. Gå till **SQL Editor** i vänstermenyn
+5. Klistra in hela innehållet från `docs/supabase-schema.sql` och klicka **Run**
+6. Gå till **Settings → API**
+7. Kopiera **Project URL** och **anon / public key**
 
-### 2. Google Sheet-setup
-
-1. Öppna ett nytt Google Sheet: https://sheets.google.com
-2. Gå till **Verktyg → Apps Script**
-3. Klistra in koden från `docs/setup-sheet.js` i detta repo
-4. Klicka **Kör → setupCoachMatchSheet**
-5. Kopiera Sheet-ID från URL:en (strängen mellan `/d/` och `/edit`)
-
-### 3. Lokal installation
+### 2. Lokal installation
 
 ```bash
 npm install
@@ -43,15 +33,18 @@ cp .env.example .env
 ```
 
 Öppna `.env` och fyll i:
-- `VITE_GOOGLE_CLIENT_ID` – från steg 1
-- `VITE_GOOGLE_SHEET_ID` – från steg 2
-- `VITE_APP_SECRET` – slumpmässig lång sträng (generera med `openssl rand -hex 32`)
+- `VITE_SUPABASE_URL` – Project URL från steg 1
+- `VITE_SUPABASE_ANON_KEY` – anon key från steg 1
+- `VITE_APP_SECRET` – slumpmässig lång sträng, generera med:
+  ```bash
+  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  ```
 - `VITE_APP_PASSWORD_HASH` – generera med:
   ```bash
   node -e "require('bcryptjs').hash('dittlösenord',10).then(console.log)"
   ```
 
-### 4. Starta lokalt
+### 3. Starta lokalt
 
 ```bash
 vercel dev
@@ -60,7 +53,7 @@ vercel dev
 > ⚠️ Använd **`vercel dev`** – inte `npm run dev`.
 > `npm run dev` startar inte Claude-proxyn och AI-matchning fungerar inte.
 
-### 5. Deploy till Vercel
+### 4. Deploy till Vercel
 
 ```bash
 vercel --prod
@@ -69,8 +62,6 @@ vercel --prod
 Lägg sedan till dessa miljövariabler i **Vercel Dashboard**:
 - `ANTHROPIC_API_KEY` – din Anthropic-nyckel (`sk-ant-...`)
 - `APP_SECRET` – samma värde som `VITE_APP_SECRET` i din `.env`
-
-Glöm inte att lägga till din Vercel-URL i Google Cloud OAuth authorized origins.
 
 ## Tester
 
@@ -81,7 +72,7 @@ npm test
 ## Teknikstack
 
 - React 18 + Vite + Tailwind CSS
-- Google Sheets API v4 (lagring)
+- Supabase (PostgreSQL) – databas
 - Claude (`claude-sonnet-4-6`) via Vercel Serverless Function
-- Google OAuth 2.0 med PKCE
+- Lösenordsskydd med bcrypt
 - Deploy: Vercel

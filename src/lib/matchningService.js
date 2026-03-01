@@ -1,7 +1,6 @@
 // Orkestrering av matchningskörning – anropar proxy och Sheets
 
-import { sleep, generateId, nowTimestamp, toSheetsBoolean, chunkArray } from './utils.js';
-import { replaceMatchningarForRekryterare } from './sheetsService.js';
+import { sleep, generateId, nowTimestamp, chunkArray } from './utils.js';
 import { passesKeywordFilter, buildPrompt } from './matchningLogic.js';
 
 export { passesKeywordFilter, buildPrompt, KATEGORI_KEYWORDS } from './matchningLogic.js';
@@ -96,9 +95,9 @@ export async function runMatchningForRekryterare(
           tjanst_id: tjanst.id,
           rekryterare,
           ai_motivering: motivering,
-          ai_motivering_redigerad: toSheetsBoolean(false),
+          ai_motivering_redigerad: false,
           korning_datum: nowTimestamp(),
-          ny_denna_korning: toSheetsBoolean(!previousKeys.has(key)),
+          ny_denna_korning: !previousKeys.has(key),
         };
       })
     );

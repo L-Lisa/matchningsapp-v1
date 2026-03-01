@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { validatePassword, clearSession, setSession, getSession } from '../lib/auth.js';
-import { getGoogleToken } from '../lib/auth.js';
-import { cacheClearAll } from '../lib/sheetsService.js';
+import { validatePassword, getSession } from '../lib/auth.js';
 import { useDeltagare } from '../hooks/useDeltagare.js';
 import { useTjanster } from '../hooks/useTjanster.js';
 import { useMatchning } from '../hooks/useMatchning.js';
@@ -21,7 +19,6 @@ export default function Installningar() {
   const { tjanster } = useTjanster();
   const { matchningar } = useMatchning();
 
-  const googleToken = getGoogleToken();
   const session = getSession();
 
   async function handleBytLösenord(e) {
@@ -79,31 +76,17 @@ export default function Installningar() {
     setExportLoading(false);
   }
 
-  function handleClearCache() {
-    cacheClearAll();
-    alert('Cache rensad! Data laddas om från Google Sheets nästa gång.');
-  }
-
   return (
     <div className="space-y-6 max-w-lg">
-      {/* Google Sheets-status */}
+      {/* Databas-status */}
       <section className="bg-white border border-[var(--border)] rounded-xl p-5 space-y-3">
-        <h2 className="font-semibold">Google Sheets-status</h2>
+        <h2 className="font-semibold">Databas-status (Supabase)</h2>
         <div className="text-sm space-y-1">
           <p>
-            <span className="text-[var(--text-muted)]">Inloggad som: </span>
-            <span className="font-medium">{session?.email ?? '—'}</span>
-          </p>
-          <p>
-            <span className="text-[var(--text-muted)]">Google-token: </span>
-            <span className={googleToken ? 'text-[var(--success)] font-medium' : 'text-[var(--danger)]'}>
-              {googleToken ? 'Aktiv' : 'Saknas – logga in på nytt'}
-            </span>
+            <span className="text-[var(--text-muted)]">Session: </span>
+            <span className="text-[var(--success)] font-medium">Aktiv</span>
           </p>
         </div>
-        <Button variant="secondary" size="sm" onClick={handleClearCache}>
-          Rensa lokal cache
-        </Button>
       </section>
 
       {/* Byt lösenord */}
