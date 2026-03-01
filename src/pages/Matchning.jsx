@@ -19,7 +19,7 @@ const REK_COLORS = {
 export default function Matchning() {
   const { deltagare, cvData, load: loadD } = useDeltagare();
   const { tjanster, load: loadT } = useTjanster();
-  const { matchningar, progress, loading, load: loadM, runMatchning, editMotivering } = useMatchning();
+  const { matchningar, progress, loading, load: loadM, runMatchning, editMotivering, addMatchning, removeMatchning } = useMatchning();
 
   const [selectedRek, setSelectedRek] = useState(new Set());
   const [running, setRunning] = useState(false);
@@ -210,6 +210,8 @@ export default function Matchning() {
                     matchningar={ms}
                     deltagare={deltagare}
                     onEditMotivering={editMotivering}
+                    onAddMatchning={addMatchning}
+                    onRemoveMatchning={removeMatchning}
                   />
                 );
               })}

@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
 import {
   getMatchningar, replaceMatchningarForRekryterare, updateMatchningById,
+  insertMatchning, deleteMatchningById,
 } from '../lib/supabaseService.js';
 import { runMatchningForRekryterare } from '../lib/matchningService.js';
+import { generateId, nowTimestamp } from '../lib/utils.js';
 
 export function useMatchning() {
   const [matchningar, setMatchningar] = useState([]);
@@ -77,5 +79,25 @@ export function useMatchning() {
     );
   }, []);
 
-  return { matchningar, progress, loading, error, load, runMatchning, editMotivering };
+  const addMatchning = useCallback(async (deltagareId, tjanstId, rekryterare, motivering) => {
+    const matchning = {
+      id: generateId(),
+      deltagare_id: deltagareId,
+      tjanst_id: tjanstId,
+      rekryterare,
+      ai_motivering: motivering || '',
+      ai_motivering_redigerad: true, // manuellt tillagd → bevaras vid omkörning
+      korning_datum: nowTimestamp(),
+      ny_denna_korning: false,
+    };
+    await insertMatchning(matchning);
+    setMatchningar((prev) => [...prev, matchning]);
+  }, []);
+
+  const removeMatchning = useCallback(async (id) => {
+    await deleteMatchningById(id);
+    setMatchningar((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
+  return { matchningar, progress, loading, error, load, runMatchning, editMotivering, addMatchning, removeMatchning };
 }

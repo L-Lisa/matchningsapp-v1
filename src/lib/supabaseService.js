@@ -133,3 +133,13 @@ export async function updateMatchningById(id, fields) {
   const { error } = await supabase.from('matchningar').update(fields).eq('id', id);
   check(error, 'Kunde inte uppdatera motivering');
 }
+
+export async function insertMatchning(matchning) {
+  const { error } = await supabase.from('matchningar').insert([matchning]);
+  check(error, 'Kunde inte lägga till matchning');
+}
+
+export async function deleteMatchningById(id) {
+  const { error } = await supabase.from('matchningar').delete().eq('id', id);
+  check(error, 'Kunde inte ta bort matchning');
+}
