@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // bcryptjs: peka på browser-versionen för att undvika Node crypto-varning
+      bcryptjs: path.resolve(__dirname, 'node_modules/bcryptjs/dist/bcrypt.js'),
     },
   },
   // pdfjs-dist 3.x kräver att worker-filen kopieras till dist
