@@ -163,6 +163,7 @@ export function mergeDeltagare(newRows, existing) {
         kategori_truckkort: false,
         kategori_nystartsjobb: false,
         kategori_bkorkort: false,
+        kategori_utvecklingsgarantin: false,
         kategori_extra_1: false,
         kategori_extra_1_namn: '',
         skapad: now,

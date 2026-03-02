@@ -62,9 +62,10 @@ export default function TjanstMatchningar({
                       {d?.visningsnamn ?? m.deltagare_id}
                     </span>
                     {parseBoolean(d?.kategori_nystartsjobb) && (
-                      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                        Nystartsjobb
-                      </span>
+                      <span className="text-xs text-[var(--text-muted)]">Nystartsjobb</span>
+                    )}
+                    {parseBoolean(d?.kategori_utvecklingsgarantin) && (
+                      <span className="text-xs text-[var(--text-muted)]">Utvecklingsgarantin</span>
                     )}
                   </div>
                   <MotiveringEditor matchning={m} onSave={onEditMotivering} />

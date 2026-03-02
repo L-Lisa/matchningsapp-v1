@@ -6,6 +6,7 @@ const KATEGORIER = [
   { field: 'kategori_truckkort',  label: 'Truckkort' },
   { field: 'kategori_nystartsjobb', label: 'Nystartsjobb' },
   { field: 'kategori_bkorkort',   label: 'B-körkort' },
+  { field: 'kategori_utvecklingsgarantin', label: 'Utvecklingsgarantin' },
 ];
 
 export default function KategoriCheckboxar({ deltagare, onChange }) {

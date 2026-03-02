@@ -10,7 +10,8 @@ export const KATEGORI_KEYWORDS = {
   stad:         ['städ', 'lokalvård', 'rengöring', 'clean', 'städare', 'hemstäd'],
   truckkort:    ['truck', 'lager', 'logistik', 'warehouse', 'truckkort'],
   nystartsjobb: ['nystartsjobb', 'nystart'],
-  bkorkort:     ['körkort', 'b-körkort', 'b körkort', 'krav körkort'],
+  bkorkort:             ['körkort', 'b-körkort', 'b körkort', 'krav körkort'],
+  utvecklingsgarantin:  ['utvecklingsgarantin', 'garanti'],
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,7 +50,8 @@ export function passesKeywordFilter(deltagare, tjanst, extraKategoriKeywords = {
     ['kategori_stad',       'stad'],
     ['kategori_truckkort',  'truckkort'],
     ['kategori_nystartsjobb', 'nystartsjobb'],
-    ['kategori_bkorkort',   'bkorkort'],
+    ['kategori_bkorkort',             'bkorkort'],
+    ['kategori_utvecklingsgarantin',  'utvecklingsgarantin'],
   ];
 
   const harNagonKategori =

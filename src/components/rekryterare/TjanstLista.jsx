@@ -4,7 +4,7 @@ import Button from '../ui/Button.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { Briefcase, Trash2, Pencil, Check, X } from 'lucide-react';
 
-export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpdate, onDelete, onDeleteAll }) {
+export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpdate, onToggleInskickad, onDelete, onDeleteAll }) {
   const [filter, setFilter] = useState('aktiva');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -185,15 +185,24 @@ export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpd
               ) : (
                 /* ── Visningsläge ── */
                 <div className="flex items-start justify-between gap-4 px-4 py-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">
-                      {t.foretag} – {t.tjanst}
-                    </p>
-                    {t.krav && (
-                      <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                        Krav: {t.krav}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={parseBoolean(t.inskickad)}
+                      onChange={() => onToggleInskickad(t.id, parseBoolean(t.inskickad))}
+                      title="Inskickad"
+                      className="mt-0.5 flex-shrink-0 w-4 h-4 accent-[var(--accent-primary)] cursor-pointer"
+                    />
+                    <div className="min-w-0">
+                      <p className={`font-medium text-sm ${parseBoolean(t.inskickad) ? 'line-through text-[var(--text-muted)]' : ''}`}>
+                        {t.foretag} – {t.tjanst}
                       </p>
-                    )}
+                      {t.krav && (
+                        <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                          Krav: {t.krav}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-1 flex-shrink-0">
