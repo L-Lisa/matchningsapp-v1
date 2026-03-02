@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Trash2, RotateCcw, Edit2, Check, X } from 'lucide-react';
+import { Upload, Trash2, RotateCcw, Edit2, Check, X, Briefcase } from 'lucide-react';
 import { weeksUntil, formatDate, parseBoolean } from '../../lib/utils.js';
 import KategoriCheckboxar from './KategoriCheckboxar.jsx';
 import CVModal from './CVModal.jsx';
@@ -28,6 +28,7 @@ export default function DeltagarKort({
   onResetMatchraknare,
   onSaveCv,
   onDeleteCv,
+  onHittaJobb,
 }) {
   const [editFritext, setEditFritext] = useState(false);
   const [fritext, setFritext] = useState(deltagare.fritext ?? '');
@@ -188,8 +189,8 @@ export default function DeltagarKort({
         )}
       </div>
 
-      {/* Arkivera */}
-      <div className="pt-2 border-t border-[var(--border)]">
+      {/* Hitta jobb + Arkivera */}
+      <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between gap-2 flex-wrap">
         {confirmArkivera ? (
           <div className="flex gap-2 items-center text-sm">
             <span className="text-[var(--text-secondary)]">Arkivera {deltagare.visningsnamn}?</span>
@@ -199,9 +200,16 @@ export default function DeltagarKort({
             <Button size="sm" variant="ghost" onClick={() => setConfirmArkivera(false)}>Avbryt</Button>
           </div>
         ) : (
-          <Button size="sm" variant="ghost" onClick={() => setConfirmArkivera(true)}>
-            <Trash2 className="w-3.5 h-3.5" /> Arkivera
-          </Button>
+          <div className="flex items-center gap-2">
+            {onHittaJobb && cvList.length > 0 && (
+              <Button size="sm" variant="secondary" onClick={() => onHittaJobb(deltagare, cvList)}>
+                <Briefcase className="w-3.5 h-3.5" /> Hitta jobb
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setConfirmArkivera(true)}>
+              <Trash2 className="w-3.5 h-3.5" /> Arkivera
+            </Button>
+          </div>
         )}
       </div>
 

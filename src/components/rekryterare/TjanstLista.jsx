@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { parseBoolean } from '../../lib/utils.js';
 import Button from '../ui/Button.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
-import { Briefcase, Trash2, Pencil, Check, X } from 'lucide-react';
+import { Briefcase, Trash2, Pencil, Check, X, Users } from 'lucide-react';
 
-export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpdate, onToggleInskickad, onDelete, onDeleteAll }) {
+export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpdate, onToggleInskickad, onHittaDeltagare, onDelete, onDeleteAll }) {
   const [filter, setFilter] = useState('aktiva');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -210,6 +210,17 @@ export default function TjanstLista({ tjanster, rekryterare, onReaktivera, onUpd
                       <Button size="sm" variant="secondary" onClick={() => onReaktivera(t.id)}>
                         Reaktivera
                       </Button>
+                    )}
+
+                    {/* Hitta deltagare */}
+                    {onHittaDeltagare && aktiv && (
+                      <button
+                        onClick={() => onHittaDeltagare(t)}
+                        className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--accent-light)] transition-colors"
+                        title="Hitta deltagare för detta jobb"
+                      >
+                        <Users className="w-4 h-4" />
+                      </button>
                     )}
 
                     {/* Redigera */}

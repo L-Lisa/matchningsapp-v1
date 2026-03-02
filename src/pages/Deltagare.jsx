@@ -2,10 +2,13 @@ import { useEffect, useState, useMemo } from 'react';
 import { Users, Search } from 'lucide-react';
 import { useDeltagare } from '../hooks/useDeltagare.js';
 import { parseBoolean, normalize } from '../lib/utils.js';
+import { getTjanster } from '../lib/supabaseService.js';
+import { runScenarioDeltagare } from '../lib/matchningService.js';
 import DeltagarImport from '../components/deltagare/DeltagarImport.jsx';
 import DeltagarKort from '../components/deltagare/DeltagarKort.jsx';
 import NyaDeltagarPrompt from '../components/deltagare/NyaDeltagarPrompt.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
+import ScenarioModal from '../components/scenario/ScenarioModal.jsx';
 
 export default function Deltagare() {
   const {
@@ -19,6 +22,27 @@ export default function Deltagare() {
   const [search, setSearch] = useState('');
   const [nyaDeltagare, setNyaDeltagare] = useState([]);
   const [showNyaPrompt, setShowNyaPrompt] = useState(false);
+
+  // Scenario A – deltagare → jobb
+  const [scenario, setScenario] = useState(null); // null | { deltagare, cvList, results, loading, error }
+
+  async function handleHittaJobb(deltagare, cvList) {
+    setScenario({ deltagare, cvList, results: null, loading: false, error: null });
+  }
+
+  async function runScenario(extraKontext) {
+    if (!scenario) return;
+    setScenario((s) => ({ ...s, loading: true, error: null, results: null }));
+    try {
+      const allTjanster = await getTjanster();
+      const aktiva = allTjanster.filter((t) => parseBoolean(t.aktiv));
+      const cvTexter = scenario.cvList.map((c) => ({ rubrik: c.rubrik, cv_text: c.cv_text }));
+      const results = await runScenarioDeltagare(scenario.deltagare, cvTexter, aktiva, extraKontext);
+      setScenario((s) => ({ ...s, loading: false, results }));
+    } catch (err) {
+      setScenario((s) => ({ ...s, loading: false, error: err.message }));
+    }
+  }
 
   useEffect(() => { load(); }, []);
 
@@ -163,9 +187,23 @@ export default function Deltagare() {
               onResetMatchraknare={resetMatchraknare}
               onSaveCv={saveCv}
               onDeleteCv={deleteCv}
+              onHittaJobb={handleHittaJobb}
             />
           ))}
         </div>
+      )}
+
+      {/* Scenario A – modal */}
+      {scenario && (
+        <ScenarioModal
+          mode="deltagare"
+          title={`Hitta jobb för ${scenario.deltagare.visningsnamn}`}
+          results={scenario.results}
+          loading={scenario.loading}
+          error={scenario.error}
+          onRun={runScenario}
+          onClose={() => setScenario(null)}
+        />
       )}
     </div>
   );

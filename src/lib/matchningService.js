@@ -1,7 +1,10 @@
 // Orkestrering av matchningskörning – anropar proxy
 
 import { sleep, generateId, nowTimestamp, chunkArray } from './utils.js';
-import { buildMultiPrompt, parseMultiResponse } from './matchningLogic.js';
+import {
+  buildMultiPrompt, parseMultiResponse,
+  buildScenarioTjanstPrompt, parseScenarioTjanstResponse,
+} from './matchningLogic.js';
 
 export { passesKeywordFilter, buildPrompt, INGEN_MATCH_SIGNAL, KATEGORI_KEYWORDS, buildMultiPrompt, parseMultiResponse } from './matchningLogic.js';
 
@@ -48,7 +51,78 @@ async function callProxy(prompt, attempt = 1) {
  * @param {Function} onProgress - Callback: (done, total, message) => void
  * @returns {Array} Matchningar att spara (inkl. bevarade redigerade)
  */
-const BATCH_SIZE = 30; // tjänster per Claude-anrop
+const BATCH_SIZE = 30;    // tjänster per Claude-anrop (deltagare → jobb)
+const SCENARIO_BATCH = 15; // deltagare per Claude-anrop (jobb → deltagare)
+
+// ─── Scenario A: en deltagare → hitta matchande jobb ─────────────────────────
+
+/**
+ * Kör scenario för en deltagare mot alla angivna tjänster.
+ * Ingen keyword-filter – Claude ser alla jobb med CV.
+ *
+ * @param {object} deltagare  - med visningsnamn, fritext och kategori-fält
+ * @param {Array}  cvTexter   - [{rubrik, cv_text}]
+ * @param {Array}  allTjanster - aktiva tjänster från alla rekryterare
+ * @returns {Array} [{tjanst, motivering}]
+ */
+export async function runScenarioDeltagare(deltagare, cvTexter, allTjanster) {
+  if (!cvTexter || cvTexter.length === 0) return [];
+
+  const tjansterMedCV = allTjanster.filter((t) => t.aktiv !== false);
+  const batches = chunkArray(tjansterMedCV, BATCH_SIZE);
+  const results = [];
+
+  for (const batch of batches) {
+    const prompt = buildMultiPrompt(deltagare, cvTexter, batch);
+    const text = await callProxy(prompt);
+    const matches = parseMultiResponse(text, batch);
+
+    for (const { tjanst_id, motivering } of matches) {
+      const tjanst = batch.find((t) => t.id === tjanst_id);
+      if (tjanst) results.push({ tjanst, motivering });
+    }
+
+    if (batches.length > 1) await sleep(300);
+  }
+
+  return results;
+}
+
+// ─── Scenario B: ett jobb → hitta matchande deltagare ────────────────────────
+
+/**
+ * Kör scenario för en tjänst mot alla deltagare med CV.
+ * Ingen keyword-filter – Claude ser alla deltagare.
+ *
+ * @param {object} tjanst        - { id, tjanst, foretag, krav, rekryterare }
+ * @param {Array}  allDeltagare  - aktiva deltagare med _cvTexter inlagda
+ * @param {string} extraKontext  - valfri extra info från Lisa
+ * @returns {Array} [{deltagare, motivering}]
+ */
+export async function runScenarioTjanst(tjanst, allDeltagare, extraKontext = '') {
+  const medCV = allDeltagare.filter(
+    (d) => d._cvTexter && d._cvTexter.length > 0
+  );
+  const batches = chunkArray(medCV, SCENARIO_BATCH);
+  const results = [];
+
+  for (const batch of batches) {
+    const prompt = buildScenarioTjanstPrompt(tjanst, batch, extraKontext);
+    const text = await callProxy(prompt);
+    const matches = parseScenarioTjanstResponse(text, batch);
+
+    for (const { deltagare_id, motivering } of matches) {
+      const d = batch.find((x) => x.id === deltagare_id);
+      if (d) results.push({ deltagare: d, motivering });
+    }
+
+    if (batches.length > 1) await sleep(300);
+  }
+
+  return results;
+}
+
+// ─── Matchningskörning ───────────────────────────────────────────────────────
 
 /**
  * Kör matchning för en rekryterare.

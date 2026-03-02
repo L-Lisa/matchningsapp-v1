@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTjanster, REKRYTERARE } from '../hooks/useTjanster.js';
 import { parseBoolean } from '../lib/utils.js';
+import { getDeltagare, getAllCV } from '../lib/supabaseService.js';
+import { runScenarioTjanst } from '../lib/matchningService.js';
 import TjanstImport from '../components/rekryterare/TjanstImport.jsx';
 import TjanstLista from '../components/rekryterare/TjanstLista.jsx';
+import ScenarioModal from '../components/scenario/ScenarioModal.jsx';
 
 const REK_COLORS = {
   Petra:  'var(--petra)',
@@ -14,6 +17,32 @@ const REK_COLORS = {
 export default function Rekryterare() {
   const { tjanster, loading, error, load, importTjanster, reaktiveraTjanst, updateTjanst, toggleInskickad, deleteTjanst, deleteAllTjanster, getTjansterForRekryterare } = useTjanster();
   const [activeTab, setActiveTab] = useState('Petra');
+
+  // Scenario B – jobb → deltagare
+  const [scenario, setScenario] = useState(null); // null | { tjanst, results, loading, error }
+
+  function handleHittaDeltagare(tjanst) {
+    setScenario({ tjanst, results: null, loading: false, error: null });
+  }
+
+  async function runScenario(extraKontext) {
+    if (!scenario) return;
+    setScenario((s) => ({ ...s, loading: true, error: null, results: null }));
+    try {
+      const [allDeltagare, allCv] = await Promise.all([getDeltagare(), getAllCV()]);
+      const aktiva = allDeltagare.filter((d) => parseBoolean(d.aktiv));
+      const cvMap = new Map();
+      for (const cv of allCv) {
+        if (!cvMap.has(cv.deltagare_id)) cvMap.set(cv.deltagare_id, []);
+        cvMap.get(cv.deltagare_id).push({ rubrik: cv.rubrik, cv_text: cv.cv_text });
+      }
+      const medCV = aktiva.map((d) => ({ ...d, _cvTexter: cvMap.get(d.id) ?? [] }));
+      const results = await runScenarioTjanst(scenario.tjanst, medCV, extraKontext);
+      setScenario((s) => ({ ...s, loading: false, results }));
+    } catch (err) {
+      setScenario((s) => ({ ...s, loading: false, error: err.message }));
+    }
+  }
 
   useEffect(() => { load(); }, []);
 
@@ -69,10 +98,24 @@ export default function Rekryterare() {
           onReaktivera={reaktiveraTjanst}
           onUpdate={updateTjanst}
           onToggleInskickad={toggleInskickad}
+          onHittaDeltagare={handleHittaDeltagare}
           onDelete={deleteTjanst}
           onDeleteAll={() => deleteAllTjanster(activeTab)}
         />
       </div>
+
+      {/* Scenario B – modal */}
+      {scenario && (
+        <ScenarioModal
+          mode="tjanst"
+          title={`Hitta deltagare för ${scenario.tjanst.tjanst} – ${scenario.tjanst.foretag}`}
+          results={scenario.results}
+          loading={scenario.loading}
+          error={scenario.error}
+          onRun={runScenario}
+          onClose={() => setScenario(null)}
+        />
+      )}
     </div>
   );
 }
