@@ -65,15 +65,14 @@ const SCENARIO_BATCH = 15; // deltagare per Claude-anrop (jobb → deltagare)
  * @param {Array}  allTjanster - aktiva tjänster från alla rekryterare
  * @returns {Array} [{tjanst, motivering}]
  */
-export async function runScenarioDeltagare(deltagare, cvTexter, allTjanster) {
+export async function runScenarioDeltagare(deltagare, cvTexter, allTjanster, extraKontext = '') {
   if (!cvTexter || cvTexter.length === 0) return [];
 
-  const tjansterMedCV = allTjanster.filter((t) => t.aktiv !== false);
-  const batches = chunkArray(tjansterMedCV, BATCH_SIZE);
+  const batches = chunkArray(allTjanster, BATCH_SIZE);
   const results = [];
 
   for (const batch of batches) {
-    const prompt = buildMultiPrompt(deltagare, cvTexter, batch);
+    const prompt = buildMultiPrompt(deltagare, cvTexter, batch, extraKontext);
     const text = await callProxy(prompt);
     const matches = parseMultiResponse(text, batch);
 

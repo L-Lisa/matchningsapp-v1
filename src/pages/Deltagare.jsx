@@ -26,8 +26,8 @@ export default function Deltagare() {
   // Scenario A – deltagare → jobb
   const [scenario, setScenario] = useState(null); // null | { deltagare, cvList, results, loading, error }
 
-  async function handleHittaJobb(deltagare, cvList) {
-    setScenario({ deltagare, cvList, results: null, loading: false, error: null });
+  async function handleHittaJobb(valdDeltagare, cvList) {
+    setScenario({ deltagare: valdDeltagare, cvList, results: null, loading: false, error: null });
   }
 
   async function runScenario(extraKontext) {

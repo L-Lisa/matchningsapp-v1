@@ -151,7 +151,7 @@ Om personen INTE PASSAR: svara med exakt texten INGEN_MATCH och inget annat.`;
  * @param {Array}  cvTexter  - [{rubrik, cv_text}]
  * @param {Array}  tjanster  - [{id, tjanst, foretag, krav}] – max 30 per anrop
  */
-export function buildMultiPrompt(deltagare, cvTexter, tjanster) {
+export function buildMultiPrompt(deltagare, cvTexter, tjanster, extraKontext = '') {
   const cvSektioner = cvTexter
     .map((cv) => `${cv.rubrik}\n${cv.cv_text}`)
     .join('\n\n---\n\n');
@@ -168,7 +168,7 @@ export function buildMultiPrompt(deltagare, cvTexter, tjanster) {
   return `${ROM_SYSTEM}
 
 DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategorierText}` : ''}
-FRITEXT: ${deltagare.fritext?.trim() || 'Ingen extra information'}
+FRITEXT: ${deltagare.fritext?.trim() || 'Ingen extra information'}${extraKontext?.trim() ? `\nEXTRA KONTEXT: ${extraKontext.trim()}` : ''}
 CV:
 ${cvSektioner}
 
