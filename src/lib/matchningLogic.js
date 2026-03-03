@@ -224,6 +224,90 @@ DELTAGARE:
 ${deltagareLista}`;
 }
 
+// ─── AF-jobbtips: editable default instructions ───────────────────────────────
+
+export const DEFAULT_AF_QUERY_INSTRUCTIONS = `Generera 3 söktermer på svenska för Arbetsförmedlingens platsbank:
+1. DIREKT – speglar personens primära yrkeserfarenhet (t.ex. "kock", "lagerarbetare", "ekonomiassistent")
+2. TRANSFERABELT – relaterad roll där kompetensen är tillämpbar (t.ex. "kökschef" → "produktionsledare")
+3. ALTERNATIVT – en sektor eller roll personen kan växa in i baserat på sin bakgrund
+
+ROM-perspektiv: en fd VD kan söka "affärsutvecklare", "projektledare", "konsultchef". En lagerarbetare kan söka "logistikkoordinator", "truckförare", "lageransvarig". Alla bakgrunder är lika sökbara. Var specifik – undvik generella termer som "tjänsteman" eller "handläggare".`;
+
+export const DEFAULT_AF_RANK_INSTRUCTIONS = `Välj max 10 jobb som genuint passar denna person utifrån ROM-programmets perspektiv:
+- INKLUDERA: roller med direkt relevant eller transferabel erfarenhet – även överkvalificerade
+- INKLUDERA: roller som stämmer med personens fritext, kategorier och extra kontext
+- EXKLUDERA BARA om: hårda krav saknas (truckkort, B-körkort, specifika certifikat) ELLER rollen är helt irrelevant
+
+Motivering: 1–2 meningar i du-form på svenska, direkt till personen. Lyft konkret varför just det här jobbet passar – specifik erfarenhet, transferabel kompetens, eller varför de uppfyller kraven.`;
+
+// ─── AF-jobbtips: prompt-byggare ─────────────────────────────────────────────
+
+/**
+ * Ber Claude generera 3 svenska söktermer för AF utifrån CV + kontext.
+ * Svar: en sökterm per rad, inget annat.
+ *
+ * @param {string} instructions - redigerbar del, default = DEFAULT_AF_QUERY_INSTRUCTIONS
+ */
+export function buildAfQueryPrompt(deltagare, cvTexter, extraKontext = '', instructions = DEFAULT_AF_QUERY_INSTRUCTIONS) {
+  const cvSektioner = cvTexter
+    .map((cv) => `${cv.rubrik}\n${cv.cv_text}`)
+    .join('\n\n---\n\n');
+  const kategorierText = formatKategorier(deltagare);
+
+  return `Du är jobbcoach inom ROM-programmet. Analysera denna deltagares bakgrund och generera söktermer för Arbetsförmedlingens platsbank.
+
+DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategorierText}` : ''}${deltagare.fritext?.trim() ? `\nANTECKNINGAR: ${deltagare.fritext.trim()}` : ''}${extraKontext?.trim() ? `\nEXTRA KONTEXT: ${extraKontext.trim()}` : ''}
+CV:
+${cvSektioner}
+
+${instructions}
+
+Returnera exakt 3 rader. Varje rad är en sökterm (t.ex. "lagerarbetare", "kökspersonal restaurang", "IT-support tekniker"). Bara söktermerna, inget annat.`;
+}
+
+/**
+ * Ber Claude välja de 10 bästa jobben från AF-sökresultat och motivera varför.
+ * Svar-format: "MATCH [nummer]: motivering" – återanvänder samma parsers.
+ *
+ * @param {string} instructions - redigerbar del, default = DEFAULT_AF_RANK_INSTRUCTIONS
+ */
+export function buildAfRankPrompt(deltagare, cvTexter, jobs, extraKontext = '', instructions = DEFAULT_AF_RANK_INSTRUCTIONS) {
+  const cvSektioner = cvTexter
+    .map((cv) => `${cv.rubrik}\n${cv.cv_text}`)
+    .join('\n\n---\n\n');
+  const kategorierText = formatKategorier(deltagare);
+
+  const jobLista = jobs
+    .map((j, i) => {
+      const meta = [];
+      if (j.municipality) meta.push(`Plats: ${j.municipality}`);
+      if (j.workingHours) meta.push(j.workingHours);
+      if (j.duration) meta.push(j.duration);
+      if (j.drivingLicenseRequired) meta.push('Kräver körkort');
+      if (j.experienceRequired) meta.push('Kräver erfarenhet');
+      if (j.mustHave?.length) meta.push(`Hårda krav: ${j.mustHave.join(', ')}`);
+      const metaStr = meta.length ? `\n${meta.join(' | ')}` : '';
+      return `[${i + 1}] ${j.headline} – ${j.employer}${metaStr}\n${j.description}`;
+    })
+    .join('\n\n');
+
+  return `${ROM_SYSTEM}
+
+DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategorierText}` : ''}${deltagare.fritext?.trim() ? `\nANTECKNINGAR FRÅN COACH: ${deltagare.fritext.trim()}` : ''}${extraKontext?.trim() ? `\nEXTRA KONTEXT: ${extraKontext.trim()}` : ''}
+CV:
+${cvSektioner}
+
+${instructions}
+
+Instruktioner för svar:
+- För varje jobb som passar: skriv exakt "MATCH [nummer]: [motivering]"
+- För jobb som inte passar: skriv ingenting
+- Om inga passar: svara med exakt "INGA_MATCHER"
+
+JOBBANNONSER (${jobs.length} st):
+${jobLista}`;
+}
+
 // ─── Svar-parsers ─────────────────────────────────────────────────────────────
 
 /**

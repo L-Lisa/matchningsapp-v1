@@ -5,6 +5,14 @@ import { useTjanster } from '../hooks/useTjanster.js';
 import { useMatchning } from '../hooks/useMatchning.js';
 import Button from '../components/ui/Button.jsx';
 import bcrypt from 'bcryptjs';
+import {
+  DEFAULT_AF_QUERY_INSTRUCTIONS,
+  DEFAULT_AF_RANK_INSTRUCTIONS,
+} from '../lib/matchningLogic.js';
+import {
+  STORAGE_KEY_QUERY,
+  STORAGE_KEY_RANK,
+} from '../lib/afJobsService.js';
 
 export default function Installningar() {
   const [gammalt, setGammalt] = useState('');
@@ -14,6 +22,29 @@ export default function Installningar() {
   const [pwLoading, setPwLoading] = useState(false);
 
   const [exportLoading, setExportLoading] = useState(false);
+
+  // AF-instruktioner (localStorage)
+  const [queryInstr, setQueryInstr] = useState(
+    () => localStorage.getItem(STORAGE_KEY_QUERY) || DEFAULT_AF_QUERY_INSTRUCTIONS
+  );
+  const [rankInstr, setRankInstr] = useState(
+    () => localStorage.getItem(STORAGE_KEY_RANK) || DEFAULT_AF_RANK_INSTRUCTIONS
+  );
+  const [instrSaved, setInstrSaved] = useState(false);
+
+  function saveAfInstructions() {
+    localStorage.setItem(STORAGE_KEY_QUERY, queryInstr);
+    localStorage.setItem(STORAGE_KEY_RANK, rankInstr);
+    setInstrSaved(true);
+    setTimeout(() => setInstrSaved(false), 2000);
+  }
+
+  function resetAfInstructions() {
+    localStorage.removeItem(STORAGE_KEY_QUERY);
+    localStorage.removeItem(STORAGE_KEY_RANK);
+    setQueryInstr(DEFAULT_AF_QUERY_INSTRUCTIONS);
+    setRankInstr(DEFAULT_AF_RANK_INSTRUCTIONS);
+  }
 
   const { deltagare, cvData, load: loadD } = useDeltagare();
   const { tjanster } = useTjanster();
@@ -123,6 +154,55 @@ export default function Installningar() {
         <Button variant="secondary" loading={exportLoading} onClick={handleExport}>
           Exportera JSON
         </Button>
+      </section>
+
+      {/* AF-jobbtips: instruktioner */}
+      <section className="bg-white border border-[var(--border)] rounded-xl p-5 space-y-4">
+        <div>
+          <h2 className="font-semibold">AF-jobbtips – instruktioner</h2>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
+            Styr hur Claude söker och rankar jobb på Arbetsförmedlingen. Sparas lokalt i din webbläsare.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-[var(--text-secondary)]">
+            Söktermsgenerering
+          </label>
+          <p className="text-xs text-[var(--text-muted)]">
+            Instruktioner för att generera sökord till AF:s platsbank (3 termer per sökning).
+          </p>
+          <textarea
+            value={queryInstr}
+            onChange={(e) => setQueryInstr(e.target.value)}
+            rows={6}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] focus:outline-none focus:border-[var(--accent-primary)] resize-y font-mono"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-[var(--text-secondary)]">
+            Rankningsbedömning
+          </label>
+          <p className="text-xs text-[var(--text-muted)]">
+            Instruktioner för hur Claude väljer och motiverar de 10 bästa jobben.
+          </p>
+          <textarea
+            value={rankInstr}
+            onChange={(e) => setRankInstr(e.target.value)}
+            rows={6}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] focus:outline-none focus:border-[var(--accent-primary)] resize-y font-mono"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button onClick={saveAfInstructions}>
+            {instrSaved ? 'Sparad!' : 'Spara instruktioner'}
+          </Button>
+          <Button variant="ghost" onClick={resetAfInstructions}>
+            Återställ standard
+          </Button>
+        </div>
       </section>
     </div>
   );
