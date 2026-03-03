@@ -6,6 +6,22 @@ import KategoriCheckboxar from './KategoriCheckboxar.jsx';
 import CVModal from './CVModal.jsx';
 import Button from '../ui/Button.jsx';
 
+const KATEGORI_BADGE = {
+  DIREKT:        { label: 'Direkt',        cls: 'bg-green-100 text-green-700' },
+  TRANSFERABELT: { label: 'Transferabelt', cls: 'bg-blue-100 text-blue-700' },
+  ALTERNATIVT:   { label: 'Alternativt',   cls: 'bg-purple-100 text-purple-700' },
+};
+
+function KategoriBadge({ kategori }) {
+  const badge = KATEGORI_BADGE[kategori];
+  if (!badge) return null;
+  return (
+    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${badge.cls}`}>
+      {badge.label}
+    </span>
+  );
+}
+
 function SlutdatumBadge({ slutdatum }) {
   const w = weeksUntil(slutdatum);
   let cls = 'bg-[var(--bg-secondary)] text-[var(--text-muted)]';
@@ -59,9 +75,10 @@ export default function DeltagarKort({
 
   function copyAll() {
     if (!afState?.results?.length) return;
-    const lines = [`10 jobbtips för ${deltagare.visningsnamn}:\n`];
-    afState.results.forEach(({ job, motivering }, i) => {
-      lines.push(`${i + 1}. ${job.headline} – ${job.employer}`);
+    const lines = [`${afState.results.length} jobbtips för ${deltagare.visningsnamn}:\n`];
+    afState.results.forEach(({ job, motivering, kategori }, i) => {
+      const tag = kategori ? ` [${KATEGORI_BADGE[kategori]?.label ?? kategori}]` : '';
+      lines.push(`${i + 1}. ${job.headline} – ${job.employer}${tag}`);
       lines.push(`   ${motivering}`);
       if (job.url) lines.push(`   Ansök: ${job.url}`);
       lines.push('');
@@ -276,13 +293,19 @@ export default function DeltagarKort({
                 </button>
               </div>
               <ul className="space-y-3">
-                {afState.results.map(({ job, motivering }, i) => (
+                {afState.results.map(({ job, motivering, kategori }) => (
                   <li key={job.id} className="text-sm border-l-2 border-[var(--border)] pl-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="font-medium">{job.headline}</span>
-                        {job.employer && (
-                          <span className="text-[var(--text-muted)]"> – {job.employer}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium">{job.headline}</span>
+                          {job.employer && (
+                            <span className="text-[var(--text-muted)]">– {job.employer}</span>
+                          )}
+                          {kategori && <KategoriBadge kategori={kategori} />}
+                        </div>
+                        {job.municipality && (
+                          <span className="text-xs text-[var(--text-muted)]">{job.municipality}</span>
                         )}
                       </div>
                       {job.url && (

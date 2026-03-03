@@ -233,12 +233,17 @@ export const DEFAULT_AF_QUERY_INSTRUCTIONS = `Generera 3 söktermer på svenska 
 
 ROM-perspektiv: en fd VD kan söka "affärsutvecklare", "projektledare", "konsultchef". En lagerarbetare kan söka "logistikkoordinator", "truckförare", "lageransvarig". Alla bakgrunder är lika sökbara. Var specifik – undvik generella termer som "tjänsteman" eller "handläggare".`;
 
-export const DEFAULT_AF_RANK_INSTRUCTIONS = `Välj max 10 jobb som genuint passar denna person utifrån ROM-programmets perspektiv:
+export const DEFAULT_AF_RANK_INSTRUCTIONS = `Välj max 15 jobb som genuint passar denna person utifrån ROM-programmets perspektiv:
 - INKLUDERA: roller med direkt relevant eller transferabel erfarenhet – även överkvalificerade
 - INKLUDERA: roller som stämmer med personens fritext, kategorier och extra kontext
 - EXKLUDERA BARA om: hårda krav saknas (truckkort, B-körkort, specifika certifikat) ELLER rollen är helt irrelevant
 
-Motivering: 1–2 meningar i du-form på svenska, direkt till personen. Lyft konkret varför just det här jobbet passar – specifik erfarenhet, transferabel kompetens, eller varför de uppfyller kraven.`;
+Tagga varje match med en av tre typer:
+- DIREKT: personen har exakt den erfarenheten – trygg kandidatur
+- TRANSFERABELT: kompetens från annan bransch/roll är tillämpbar – kräver pitch
+- ALTERNATIVT: personen kan växa in i rollen baserat på sin bakgrund
+
+Motivering: 1–2 meningar i du-form på svenska, direkt till personen. Lyft konkret varför just det här jobbet passar.`;
 
 // ─── AF-jobbtips: prompt-byggare ─────────────────────────────────────────────
 
@@ -300,7 +305,7 @@ ${cvSektioner}
 ${instructions}
 
 Instruktioner för svar:
-- För varje jobb som passar: skriv exakt "MATCH [nummer]: [motivering]"
+- För varje jobb som passar: skriv exakt "MATCH [nummer] DIREKT: [motivering]" eller "MATCH [nummer] TRANSFERABELT: [motivering]" eller "MATCH [nummer] ALTERNATIVT: [motivering]"
 - För jobb som inte passar: skriv ingenting
 - Om inga passar: svara med exakt "INGA_MATCHER"
 

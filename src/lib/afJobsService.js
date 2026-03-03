@@ -62,19 +62,28 @@ function parseQueryResponse(text) {
 
 function parseRankResponse(text, jobs) {
   if (!text || text.trim() === 'INGA_MATCHER') return [];
-  const MATCH_LINE = /^MATCH\s+\[?(\d+)\]?:\s*(.*)$/i;
+  // Stöder både taggat format: MATCH [n] DIREKT: text
+  // och gammalt format: MATCH [n]: text (fallback utan tag)
+  const MATCH_WITH_TAG = /^MATCH\s+\[?(\d+)\]?\s+(DIREKT|TRANSFERABELT|ALTERNATIVT):\s*(.*)$/i;
+  const MATCH_PLAIN    = /^MATCH\s+\[?(\d+)\]?:\s*(.*)$/i;
   const lines = text.split('\n');
   const results = [];
   let current = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
-    const hit = trimmed.match(MATCH_LINE);
-    if (hit) {
+    const tagged = trimmed.match(MATCH_WITH_TAG);
+    const plain  = !tagged && trimmed.match(MATCH_PLAIN);
+
+    if (tagged || plain) {
       if (current) results.push(current);
-      const idx = parseInt(hit[1], 10) - 1;
+      const idx = parseInt((tagged || plain)[1], 10) - 1;
       if (idx >= 0 && idx < jobs.length) {
-        current = { job: jobs[idx], motivering: hit[2].trim() };
+        current = {
+          job: jobs[idx],
+          kategori: tagged ? tagged[2].toUpperCase() : null,
+          motivering: (tagged ? tagged[3] : plain[2]).trim(),
+        };
       } else {
         current = null;
       }
@@ -83,7 +92,7 @@ function parseRankResponse(text, jobs) {
     }
   }
   if (current) results.push(current);
-  return results.slice(0, 10);
+  return results.slice(0, 15);
 }
 
 /**
