@@ -74,7 +74,7 @@ export default function JobbFokus() {
     try {
       await runJobbFokus(
         valideraRoller,
-        deltagareWithCV,
+        deltagareMedCV,
         extraKontext,
         {
           onProgress: ({ done, total }) => setProgress({ done, total }),

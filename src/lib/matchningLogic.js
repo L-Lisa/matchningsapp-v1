@@ -347,16 +347,20 @@ export function buildJobbFokusPrompt(deltagare, cvTexter, roller, extraKontext =
     .map((r, i) => `[${i + 1}] ${r.titel}`)
     .join('\n');
 
-  // Roller visas FÖRE CV så att Claude läser CV:t med rollistan i minnet –
-  // precis som en rekryterare som läser ett CV med jobbannonsen framför sig.
-  return `${JOBB_FOKUS_SYSTEM}
+  // extraKontext placeras FÖRE rollistan och CV så att det fungerar som ett
+  // tidigt framing-direktiv – inte som en sen metadata-rad Claude ignorerar.
+  const direktiv = extraKontext?.trim()
+    ? `\nCOACHINS DIREKTIV (följ strikt för ALLA roller): ${extraKontext.trim()}\n`
+    : '';
 
+  return `${JOBB_FOKUS_SYSTEM}
+${direktiv}
 Gå igenom rollerna [1]–[${roller.length}] nedan, läs sedan CV:t noggrant och rapportera vilka roller personen passar för.
 
 ROLLER ATT UTVÄRDERA:
 ${rollLista}
 
-DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategorierText}` : ''}${deltagare.fritext?.trim() ? `\nANTECKNINGAR: ${deltagare.fritext.trim()}` : ''}${extraKontext?.trim() ? `\nEXTRA KONTEXT: ${extraKontext.trim()}` : ''}
+DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategorierText}` : ''}${deltagare.fritext?.trim() ? `\nANTECKNINGAR: ${deltagare.fritext.trim()}` : ''}
 
 CV:
 ${cvSektioner}
