@@ -319,9 +319,11 @@ ${jobLista}`;
 
 const JOBB_FOKUS_SYSTEM = `Du är en skarp rekryterare som går igenom en portfolio av jobbsökande för att identifiera kandidater till specifika roller. Ditt uppdrag är att hitta ALLA med relevant erfarenhet – hellre fler förslag än att missa en kandidat. Coachen avgör vem som faktiskt går vidare.
 
-Definitioner:
-- DIREKT: CV:t visar tydlig erfarenhet av denna typ av arbete. Exakt titel behöver inte stämma – "agil projektledare", "PL" och "scrum master" är alla DIREKT-match för "projektledare". "Data analyst" med Python och ETL är DIREKT-match för "data engineer".
-- TRANSFERABELT: CV:t visar konkreta kompetenser, verktyg eller branschemerfarenhet som är direkt tillämpbar i rollen, även om bakgrunden är från en annan sektor.
+CV:n kan vara på svenska, engelska eller annat språk – matcha mot svenska rolltitlar med samma precision oavsett CV-språk.
+
+Definitioner (använd den HÖGSTA kategori som CV:t stöder – nedgradera aldrig om bevis finns):
+- DIREKT: CV:t visar tydlig, primär erfarenhet av exakt denna typ av arbete eller en nära besläktad roll. Titel behöver inte stämma – "agil projektledare", "PL", "scrum master" är alla DIREKT för "projektledare". Använd DIREKT när CV:t visar att personen faktiskt gjort detta arbete, oavsett bransch. Om du är osäker mellan DIREKT och TRANSFERABELT och CV:t innehåller konkreta bevis – välj DIREKT.
+- TRANSFERABELT: CV:t visar konkreta kompetenser eller verktyg som är direkt tillämpbara, men personen har inte gjort exakt detta arbete. Bakgrunden är från en annan sektor eller roll.
 - ALTERNATIVT: CV:t visar angränsande bakgrund – personen kan växa in i rollen med stöd.
 
 Hårda krav (truckkort, B-körkort, specifika certifikat): matcha bara om CV:t visar att personen uppfyller dem.`;
@@ -347,25 +349,26 @@ export function buildJobbFokusPrompt(deltagare, cvTexter, roller, extraKontext =
     .map((r, i) => `[${i + 1}] ${r.titel}`)
     .join('\n');
 
-  // extraKontext placeras FÖRE rollistan och CV så att det fungerar som ett
-  // tidigt framing-direktiv – inte som en sen metadata-rad Claude ignorerar.
+  // CV placeras FÖRE rollistan: Claude läser hela CV:t med systemprompten i minnet,
+  // sedan listas rollerna precis före svaret (recency-effekt = alla roller får lika fokus).
+  // Direktiv upprepas BOTH tidigt (primacy) och precis före instruktioner (recency).
   const direktiv = extraKontext?.trim()
-    ? `\nCOACHINS DIREKTIV (följ strikt för ALLA roller): ${extraKontext.trim()}\n`
+    ? `COACHINS DIREKTIV (följ strikt för ALLA roller): ${extraKontext.trim()}`
     : '';
 
   return `${JOBB_FOKUS_SYSTEM}
-${direktiv}
-Gå igenom rollerna [1]–[${roller.length}] nedan, läs sedan CV:t noggrant och rapportera vilka roller personen passar för.
-
-ROLLER ATT UTVÄRDERA:
-${rollLista}
-
+${direktiv ? `\n${direktiv}\n` : ''}
 DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategorierText}` : ''}${deltagare.fritext?.trim() ? `\nANTECKNINGAR: ${deltagare.fritext.trim()}` : ''}
 
 CV:
 ${cvSektioner}
 
-Rapportera nu roll för roll [1]–[${roller.length}]:
+Nedan är ${roller.length} roller att bedöma utifrån CV:t du precis läste:
+
+ROLLER ATT UTVÄRDERA:
+${rollLista}
+${direktiv ? `\n${direktiv}\n` : ''}
+Rapportera roll för roll [1]–[${roller.length}]:
 - MATCH [nummer] DIREKT: [motivering med konkret CV-referens]
 - MATCH [nummer] TRANSFERABELT: [motivering med konkret CV-referens]
 - MATCH [nummer] ALTERNATIVT: [motivering med konkret CV-referens]
