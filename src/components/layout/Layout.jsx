@@ -8,6 +8,7 @@ const PAGE_TITLES = {
   '/deltagare':    'Deltagare',
   '/rekryterare':  'Rekryterare',
   '/matchning':    'Matchning',
+  '/jobbfokus':   'Jobb Fokus',
   '/export':       'Export',
   '/installningar':'Inställningar',
 };

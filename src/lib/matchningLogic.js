@@ -313,6 +313,49 @@ JOBBANNONSER (${jobs.length} st):
 ${jobLista}`;
 }
 
+// ─── Jobb Fokus: prompt-byggare ───────────────────────────────────────────────
+
+/**
+ * Utvärderar en deltagare mot flera roller på en gång.
+ * Svar-format: "MATCH [n] DIREKT|TRANSFERABELT|ALTERNATIVT: motivering"
+ *
+ * @param {object} deltagare  - med visningsnamn, fritext och kategori-fält
+ * @param {Array}  cvTexter   - [{rubrik, cv_text}]
+ * @param {Array}  roller     - [{titel}]
+ * @param {string} extraKontext
+ */
+export function buildJobbFokusPrompt(deltagare, cvTexter, roller, extraKontext = '') {
+  const cvSektioner = cvTexter
+    .map((cv) => `${cv.rubrik}\n${cv.cv_text}`)
+    .join('\n\n---\n\n');
+  const kategorierText = formatKategorier(deltagare);
+
+  const rollLista = roller
+    .map((r, i) => `[${i + 1}] ${r.titel}`)
+    .join('\n');
+
+  return `${ROM_SYSTEM}
+
+DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategorierText}` : ''}${deltagare.fritext?.trim() ? `\nANTECKNINGAR: ${deltagare.fritext.trim()}` : ''}${extraKontext?.trim() ? `\nEXTRA KONTEXT: ${extraKontext.trim()}` : ''}
+CV:
+${cvSektioner}
+
+Nedan finns ${roller.length} roller. Utvärdera om denna person passar för var och en.
+
+Instruktioner:
+- PASSAR rollen: skriv "MATCH [nummer] DIREKT: [1–2 meningar motivering]" ELLER "MATCH [nummer] TRANSFERABELT: ..." ELLER "MATCH [nummer] ALTERNATIVT: ..."
+- PASSAR INTE rollen: skriv ingenting
+- Passar ingen roll: svara med exakt "INGA_MATCHER"
+
+Taggdefinitioner:
+- DIREKT: person har exakt den erfarenheten eller titeln
+- TRANSFERABELT: kompetens från annan bransch/roll är tillämpbar
+- ALTERNATIVT: person kan växa in i rollen – motiverande match
+
+ROLLER:
+${rollLista}`;
+}
+
 // ─── Svar-parsers ─────────────────────────────────────────────────────────────
 
 /**

@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, Briefcase, Zap, Download, Settings, LogOut, Menu, X
+  LayoutDashboard, Users, Briefcase, Zap, Target, Download, Settings, LogOut, Menu, X
 } from 'lucide-react';
 import { clearSession } from '../../lib/auth.js';
 import { cx } from '../../lib/utils.js';
@@ -10,6 +10,7 @@ const nav = [
   { to: '/deltagare',    icon: Users,            label: 'Deltagare' },
   { to: '/rekryterare',  icon: Briefcase,        label: 'Rekryterare' },
   { to: '/matchning',    icon: Zap,              label: 'Matchning' },
+  { to: '/jobbfokus',   icon: Target,           label: 'Jobb Fokus' },
   { to: '/export',       icon: Download,         label: 'Export' },
   { to: '/installningar',icon: Settings,         label: 'Inställningar' },
 ];

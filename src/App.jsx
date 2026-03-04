@@ -8,6 +8,7 @@ import Rekryterare from './pages/Rekryterare.jsx';
 import Matchning from './pages/Matchning.jsx';
 import Export from './pages/Export.jsx';
 import Installningar from './pages/Installningar.jsx';
+import JobbFokus from './pages/JobbFokus.jsx';
 
 function ProtectedLayout({ children }) {
   return (
@@ -37,6 +38,10 @@ export default function App() {
         <Route
           path="/matchning"
           element={<ProtectedLayout><Matchning /></ProtectedLayout>}
+        />
+        <Route
+          path="/jobbfokus"
+          element={<ProtectedLayout><JobbFokus /></ProtectedLayout>}
         />
         <Route
           path="/export"
