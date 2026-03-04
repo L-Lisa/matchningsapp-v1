@@ -47,7 +47,7 @@ export default function JobbFokus() {
   const deltagareMedCV = deltagareWithCV.filter((d) => d._cvTexter.length > 0);
 
   function addRoll() {
-    if (roller.length >= 15) return;
+    if (roller.length >= 30) return;
     setRoller((prev) => [...prev, { titel: '' }]);
   }
 
@@ -109,7 +109,7 @@ export default function JobbFokus() {
         <div>
           <h2 className="font-semibold">Roller att utvärdera</h2>
           <p className="text-sm text-[var(--text-muted)] mt-0.5">
-            Lägg till upp till 15 roller – Claude utvärderar varje aktiv deltagare med CV
+            Lägg till upp till 30 roller – Claude utvärderar varje aktiv deltagare med CV
             {!loading && ` (${deltagareMedCV.length} st)`} individuellt mot alla roller på en gång.
           </p>
         </div>
@@ -144,7 +144,7 @@ export default function JobbFokus() {
           ))}
         </ul>
 
-        {roller.length < 15 && (
+        {roller.length < 30 && (
           <button
             onClick={addRoll}
             disabled={running}
