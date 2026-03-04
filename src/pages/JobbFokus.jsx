@@ -34,6 +34,7 @@ export default function JobbFokus() {
   const [results, setResults] = useState(null); // null = ej startad, {} = pågående/klar
   const [rollerUsed, setRollerUsed] = useState([]);
   const [error, setError] = useState(null);
+  const [failedNames, setFailedNames] = useState([]);
 
   const deltagareWithCV = useMemo(() => (
     deltagare
@@ -67,6 +68,7 @@ export default function JobbFokus() {
     setRunning(true);
     setResults({});
     setError(null);
+    setFailedNames([]);
     setProgress({ done: 0, total: 0 });
 
     try {
@@ -76,6 +78,7 @@ export default function JobbFokus() {
         extraKontext,
         {
           onProgress: ({ done, total }) => setProgress({ done, total }),
+          onFailed: (name) => setFailedNames((prev) => [...prev, name]),
           onMatch: (d, matches) => {
             setResults((prev) => {
               const next = { ...(prev ?? {}) };
@@ -208,6 +211,13 @@ export default function JobbFokus() {
       {/* Fel */}
       {error && (
         <p className="text-sm text-[var(--danger)] bg-red-50 rounded-lg px-4 py-3">{error}</p>
+      )}
+
+      {/* Varning om deltagare misslyckades */}
+      {failedNames.length > 0 && !running && (
+        <p className="text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-4 py-3">
+          {failedNames.length} deltagare kunde inte utvärderas och kan ha missade matcher: {failedNames.join(', ')}. Prova att köra igen.
+        </p>
       )}
 
       {/* Resultat per roll */}

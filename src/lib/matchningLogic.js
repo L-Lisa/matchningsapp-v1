@@ -334,26 +334,28 @@ export function buildJobbFokusPrompt(deltagare, cvTexter, roller, extraKontext =
     .map((r, i) => `[${i + 1}] ${r.titel}`)
     .join('\n');
 
+  // Roller visas FÖRE CV så att Claude läser CV:t med rollistan i minnet –
+  // precis som en rekryterare som läser ett CV med jobbannonsen framför sig.
   return `${ROM_SYSTEM}
 
+Du utvärderar en jobbsökande mot ${roller.length} roller. Läs rollerna nedan, läs sedan CV:t noggrant och rapportera vilka roller personen faktiskt passar för.
+
+ROLLER ATT UTVÄRDERA [1]–[${roller.length}]:
+${rollLista}
+
 DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategorierText}` : ''}${deltagare.fritext?.trim() ? `\nANTECKNINGAR: ${deltagare.fritext.trim()}` : ''}${extraKontext?.trim() ? `\nEXTRA KONTEXT: ${extraKontext.trim()}` : ''}
+
 CV:
 ${cvSektioner}
 
-Nedan finns ${roller.length} roller. Utvärdera om denna person passar för var och en.
+Gå nu igenom rollerna [1]–[${roller.length}] systematiskt och rapportera matchningar:
+- MATCH [nummer] DIREKT: [motivering] – personen har direkt erfarenhet av detta
+- MATCH [nummer] TRANSFERABELT: [motivering] – kompetens från annan roll/bransch är tillämpbar
+- MATCH [nummer] ALTERNATIVT: [motivering] – personen kan växa in i rollen utifrån sin bakgrund
+- Ingen rad om personen inte passar den rollen
+- Svarar "INGA_MATCHER" om personen inte passar någon roll alls
 
-Instruktioner:
-- PASSAR rollen: skriv "MATCH [nummer] DIREKT: [1–2 meningar motivering]" ELLER "MATCH [nummer] TRANSFERABELT: ..." ELLER "MATCH [nummer] ALTERNATIVT: ..."
-- PASSAR INTE rollen: skriv ingenting
-- Passar ingen roll: svara med exakt "INGA_MATCHER"
-
-Taggdefinitioner:
-- DIREKT: person har exakt den erfarenheten eller titeln
-- TRANSFERABELT: kompetens från annan bransch/roll är tillämpbar
-- ALTERNATIVT: person kan växa in i rollen – motiverande match
-
-ROLLER:
-${rollLista}`;
+KRAV på motivering: referera alltid till konkret CV-innehåll (specifik erfarenhet, kompetens, jobbhistorik). Inga antaganden om vad personen kan utöver vad som faktiskt står i CV:t.`;
 }
 
 // ─── Svar-parsers ─────────────────────────────────────────────────────────────

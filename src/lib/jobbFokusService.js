@@ -77,7 +77,7 @@ function parseJobbFokusResponse(text, roller) {
  * @param {Function} callbacks.onMatch    - (deltagare, matches) => void
  *   matches: [{roll_idx, roll_titel, kategori, motivering}]
  */
-export async function runJobbFokus(roller, deltagareList, extraKontext, { onProgress, onMatch }) {
+export async function runJobbFokus(roller, deltagareList, extraKontext, { onProgress, onMatch, onFailed }) {
   const medCV = deltagareList.filter((d) => d._cvTexter?.length > 0);
   const total = medCV.length;
   let done = 0;
@@ -94,7 +94,8 @@ export async function runJobbFokus(roller, deltagareList, extraKontext, { onProg
           const matches = parseJobbFokusResponse(text, roller);
           if (matches.length > 0) onMatch(d, matches);
         } catch {
-          // Stilla vid individuellt fel – körningen fortsätter för övriga
+          // Körningen fortsätter för övriga, men vi rapporterar felet
+          onFailed?.(d.visningsnamn);
         } finally {
           done++;
           onProgress({ done, total });
