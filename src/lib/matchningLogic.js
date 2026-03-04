@@ -313,6 +313,19 @@ JOBBANNONSER (${jobs.length} st):
 ${jobLista}`;
 }
 
+// ─── Jobb Fokus: eget system-prompt ──────────────────────────────────────────
+// Skiljer sig från ROM_SYSTEM: här headhuntar coachen aktivt ur sin portfolio.
+// Inkluderande snarare än konservativ – coachen väljer bort, inte Claude.
+
+const JOBB_FOKUS_SYSTEM = `Du är en skarp rekryterare som går igenom en portfolio av jobbsökande för att identifiera kandidater till specifika roller. Ditt uppdrag är att hitta ALLA med relevant erfarenhet – hellre fler förslag än att missa en kandidat. Coachen avgör vem som faktiskt går vidare.
+
+Definitioner:
+- DIREKT: CV:t visar tydlig erfarenhet av denna typ av arbete. Exakt titel behöver inte stämma – "agil projektledare", "PL" och "scrum master" är alla DIREKT-match för "projektledare". "Data analyst" med Python och ETL är DIREKT-match för "data engineer".
+- TRANSFERABELT: CV:t visar konkreta kompetenser, verktyg eller branschemerfarenhet som är direkt tillämpbar i rollen, även om bakgrunden är från en annan sektor.
+- ALTERNATIVT: CV:t visar angränsande bakgrund – personen kan växa in i rollen med stöd.
+
+Hårda krav (truckkort, B-körkort, specifika certifikat): matcha bara om CV:t visar att personen uppfyller dem.`;
+
 // ─── Jobb Fokus: prompt-byggare ───────────────────────────────────────────────
 
 /**
@@ -336,11 +349,11 @@ export function buildJobbFokusPrompt(deltagare, cvTexter, roller, extraKontext =
 
   // Roller visas FÖRE CV så att Claude läser CV:t med rollistan i minnet –
   // precis som en rekryterare som läser ett CV med jobbannonsen framför sig.
-  return `${ROM_SYSTEM}
+  return `${JOBB_FOKUS_SYSTEM}
 
-Du utvärderar en jobbsökande mot ${roller.length} roller. Läs rollerna nedan, läs sedan CV:t noggrant och rapportera vilka roller personen faktiskt passar för.
+Gå igenom rollerna [1]–[${roller.length}] nedan, läs sedan CV:t noggrant och rapportera vilka roller personen passar för.
 
-ROLLER ATT UTVÄRDERA [1]–[${roller.length}]:
+ROLLER ATT UTVÄRDERA:
 ${rollLista}
 
 DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategorierText}` : ''}${deltagare.fritext?.trim() ? `\nANTECKNINGAR: ${deltagare.fritext.trim()}` : ''}${extraKontext?.trim() ? `\nEXTRA KONTEXT: ${extraKontext.trim()}` : ''}
@@ -348,14 +361,12 @@ DELTAGARE: ${deltagare.visningsnamn}${kategorierText ? `\nKATEGORIER: ${kategori
 CV:
 ${cvSektioner}
 
-Gå nu igenom rollerna [1]–[${roller.length}] systematiskt och rapportera matchningar:
-- MATCH [nummer] DIREKT: [motivering] – personen har direkt erfarenhet av detta
-- MATCH [nummer] TRANSFERABELT: [motivering] – kompetens från annan roll/bransch är tillämpbar
-- MATCH [nummer] ALTERNATIVT: [motivering] – personen kan växa in i rollen utifrån sin bakgrund
+Rapportera nu roll för roll [1]–[${roller.length}]:
+- MATCH [nummer] DIREKT: [motivering med konkret CV-referens]
+- MATCH [nummer] TRANSFERABELT: [motivering med konkret CV-referens]
+- MATCH [nummer] ALTERNATIVT: [motivering med konkret CV-referens]
 - Ingen rad om personen inte passar den rollen
-- Svarar "INGA_MATCHER" om personen inte passar någon roll alls
-
-KRAV på motivering: referera alltid till konkret CV-innehåll (specifik erfarenhet, kompetens, jobbhistorik). Inga antaganden om vad personen kan utöver vad som faktiskt står i CV:t.`;
+- "INGA_MATCHER" om ingen roll matchar`;
 }
 
 // ─── Svar-parsers ─────────────────────────────────────────────────────────────
